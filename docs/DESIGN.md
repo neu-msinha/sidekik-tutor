@@ -27,7 +27,7 @@ Tutor turns a published Work Map into live coaching on the learner's own screen.
 | `POST /internal/presave` | `{session_id, state}` → `{allow, guardrail_id?, quote?, step_id?}` in **under 50 ms of compute**. No model calls on this path. |
 | `POST /internal/tools/check_guardrails` | `{session_id, state?}` → violations and guardrail descriptions |
 | `POST /internal/tools/get_step` | `{session_id, step_id?}` → the current or requested step, in the expert's words |
-| `POST /internal/tools/get_expert_moment` | `{step_id}` → `{quote, quote_en, label, clip_url}` (signed, 10 min) |
+| `POST /internal/tools/get_expert_moment` | `{step_id}` → `{quote, quote_en?, label, clip_url?}` (signed, 10 min). 404 when the expert gave no reason for the step; `clip_url` is omitted until perception has cut the clip. |
 | MCP `https://mcp.sidekik.live/mcp` | Streamable HTTP, bearer `SK_TOOL_SECRET`. Exposes the same three tools plus `export_agent_rules(workmap_id)`. |
 
 **Outbound**
@@ -84,7 +84,7 @@ state: { workmap, currentStepId, invoiceState, violationsPending: Map<guardrailI
 
 - **Outcome per step**, in priority order: `independent_correct` > `prompted_correct` > `corrected_after_intervention` > `not_attempted`.
 - **Practice next:** steps that needed an intervention, plus guardrails that never came up.
-- Insert a `mastery` row and publish `summary` so the agent reads it aloud and the UI shows the panel.
+- Insert a `mastery` row and publish `summary` so the agent reads it aloud and the UI shows the panel. A session with no learner (the demo seed's learners have no user) still publishes the summary, with `learner_id: "anonymous"`, and writes no rows.
 
 ### Gap flags
 
