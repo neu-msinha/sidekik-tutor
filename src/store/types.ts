@@ -68,6 +68,8 @@ export interface Store {
   /** Storage path (bucket `captures`) of perception's newest clip for the step, if any. */
   getStepClipPath(stepId: string): Promise<string | null>;
   signStorageUrl(bucket: string, path: string, ttlS: number): Promise<string>;
+  /** A text file from Storage, or null when it doesn't exist. */
+  downloadText(bucket: string, path: string): Promise<string | null>;
   insertIntervention(row: InterventionRow): Promise<void>;
   resolveIntervention(id: string): Promise<void>;
   /** Inserts the attempt or replaces it by id. */

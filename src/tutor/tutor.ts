@@ -20,6 +20,7 @@ import { PredictLoop } from './predict.js';
 import { presave, type PresaveResult } from './presave.js';
 import type { TutorSession } from './session.js';
 import { TutorSessions } from './sessions.js';
+import { TutorTools } from './tools.js';
 import { trackStep } from './step-tracker.js';
 
 export type TutorDeps = {
@@ -35,6 +36,8 @@ export type TutorDeps = {
 export class Tutor implements Handlers {
   readonly sessions: TutorSessions;
   readonly clips: ClipLinks;
+  /** The agent's tools (webhook and MCP). */
+  readonly tools: TutorTools;
   private readonly effects: EffectDeps;
   private readonly predict: PredictLoop;
   private readonly live: LivePolicy;
@@ -43,6 +46,7 @@ export class Tutor implements Handlers {
     this.sessions = new TutorSessions(deps.store, deps.cache, deps.log.child({ component: 'tutor' }));
     this.clips = new ClipLinks(deps.store);
     this.effects = { bus: deps.bus, store: deps.store, clips: this.clips };
+    this.tools = new TutorTools({ sessions: this.sessions, cache: deps.cache, clips: this.clips, store: deps.store });
     this.predict = new PredictLoop({ bus: deps.bus, store: deps.store, decider: deps.decider });
     this.live = new LivePolicy({ ...this.effects, decider: deps.decider });
   }

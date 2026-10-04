@@ -9,6 +9,8 @@ export type MemoryData = {
   clips: ClipRow[];
   interventions: InterventionRow[];
   learner_attempts: AttemptRow[];
+  /** Storage files by `${bucket}/${path}`. */
+  storage: Record<string, string>;
 };
 
 /** In-memory store for tests and `pnpm dev:mock`. `data` is exposed so tests can inspect writes. */
@@ -20,6 +22,7 @@ export function memoryStore(seed: Partial<MemoryData> = {}): Store & { data: Mem
     clips: [...(seed.clips ?? [])],
     interventions: [...(seed.interventions ?? [])],
     learner_attempts: [...(seed.learner_attempts ?? [])],
+    storage: { ...seed.storage },
   };
   const clone = <T>(v: T): T => structuredClone(v);
 
@@ -42,6 +45,9 @@ export function memoryStore(seed: Partial<MemoryData> = {}): Store & { data: Mem
     },
     async signStorageUrl(bucket, path, ttlS) {
       return `https://storage.example/${bucket}/${path}?expires_in=${ttlS}`;
+    },
+    async downloadText(bucket, path) {
+      return data.storage[`${bucket}/${path}`] ?? null;
     },
     async insertIntervention(row) {
       data.interventions.push(clone(row));
