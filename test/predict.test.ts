@@ -97,7 +97,7 @@ describe('predict loop', () => {
 
   it('only asks at judgment-call steps, once per session', async () => {
     const { screen, commands } = await setup();
-    await screen('field_changed', 'asset_number'); // S5: not a judgment call
+    await screen('typing_in_progress', 'asset_number'); // S5: not a judgment call
     expect(await commands()).toEqual([]);
     await screen('record_opened', undefined, '4501');
     await screen('typing_in_progress', 'invoice_date'); // S2
@@ -145,6 +145,12 @@ describe('predict loop', () => {
     expect(store.data.learner_attempts).toEqual([
       expect.objectContaining({ predicted: '0400, because it is a machine', prediction_grade: null, actual_action: null }),
     ]);
+  });
+
+  it('does not ask when the step is reached by changing its field (the learner already decided)', async () => {
+    const { screen, commands } = await setup();
+    await screen('field_changed', 'invoice_date'); // S2
+    expect((await commands()).filter((c) => c.type === 'predict')).toEqual([]);
   });
 
   it('skips a step the tutor already intervened on for this record', async () => {

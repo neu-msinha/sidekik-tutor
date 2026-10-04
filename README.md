@@ -56,7 +56,7 @@ pnpm dev            # tsx watch, reads .env
 | `pnpm build` / `pnpm start` | Compile to `dist/` / run the compiled server |
 | `pnpm typecheck` | `tsc --noEmit` |
 | `pnpm test` | vitest |
-| `pnpm dev:mock` | Run against Redis only: in-memory store seeded with the published demo Work Map, no Supabase, brain stubbed (`src/dev/brain.ts`) |
+| `pnpm dev:mock` | Run against Redis only: in-memory store seeded with the published demo Work Map, no Supabase, brain stubbed (`src/dev/brain.ts`: D9 by keywords, D11 interrupts for blocking guardrails and hints for the rest, D10 can't tell) |
 | `pnpm dev:replay <file.jsonl>` | Publish fixture events onto the bus (`--speed`, `--session`) |
 
 ### Running without teammates' services
@@ -82,6 +82,14 @@ Rules (`src/guardrails/rules.ts`): each cached Work Map's guardrails are compile
 Step tracker (`src/tutor/step-tracker.ts`), DESIGN §3: each screen event's field (`state.focused_field`, or the `field` of a change, typing or click) is matched against the steps' `screen_signature` (app, record kind, field). A newly opened record resets to the first step; focusing the field of a later step moves forward to it; an earlier step's field doesn't move back, but that step still counts as reached on this case (invoice), which mastery uses. A save click is the save step (S7), and a blocked save puts the learner back on the step that teaches the blocking guardrail.
 
 Predict loop (`src/tutor/predict.ts`), DESIGN §3: when the learner reaches a judgment-call step (S2, S4 in the demo) that hasn't been predicted in this session, the tutor waits for a quiet moment (nobody talking, and the learner silent for 1.5 s; it gives up after 30 s or when the learner moves past the step) and publishes `predict`, e.g. "€7,200 equipment from Antriebstechnik Nord: code the invoice to a cost center. What would Sabine do here, and why?". The learner's next turn is graded with brain's D9 (`POST /internal/decide`, 600 ms) and written to the step's `learner_attempts` row (`predicted`, `prediction_grade`, and D9's confidence in `actual_action.prediction_confidence`, since SCHEMA has no column for it). No answer within 60 s is `no_answer`; if brain is down the prediction is kept ungraded. A step the tutor already intervened on for this record isn't asked. On `wrong` or `partially` the agent explains with the step's reason, which is already in its Procedure.
+
+Live rule engine and intervention policy (`src/tutor/live.ts`), DESIGN §3: on every `field_changed` screen event (dom or vision) every guardrail is evaluated on the open record. A violation the tutor hasn't spoken about on this record joins `violationsPending`, and brain's D11 decides, given the guardrail, the change, what the learner is doing and how long it has been pending:
+
+- `intervene_now`: `intervene` ("Stop for a moment before you go on. …", naming any other new violations), then `replay` of the expert's moment;
+- `hint_soft`: a softer `intervene` ("A quick hint, no need to stop: …"), no replay; also the fallback when brain fails;
+- `wait_and_watch`: nothing yet; D11 is asked again on the next change with the longer pending time, and the save is checked anyway.
+
+Each guardrail spoken about gets an `interventions` row (`trigger: live`); one fixed later is resolved like in the pre-save check. A change on a judgment-call step that no guardrail covers goes to D10 once per step and record; `diverges` at ≥0.80 gets one soft hint with the expert's decision and reason (`trigger: divergence`, `guardrail_id` null; the command cites the step's first guardrail, since `intervene` needs one). A step reached by changing its field isn't asked to predict: the learner has already decided.
 
 Pre-save check (`src/tutor/presave.ts`), DESIGN §3: `POST /internal/presave {session_id, state}` (gateway, `X-Internal-Token`, 250 ms budget) re-evaluates every rule on the submitted record, which replaces the tracked one (a new `invoice_id` is a new record). The check is synchronous and model-free (p99 well under 50 ms in `test/presave.test.ts`); commands and rows are written afterwards, in order, in the session's queue.
 
