@@ -15,6 +15,17 @@ export type Intervened = {
   replayed: boolean;
 };
 
+/** A prediction the tutor is about to ask, or asked and is waiting to hear back on. */
+export type PendingPrediction = {
+  stepId: string;
+  caseRef: string | null;
+  prompt: string;
+  phase: 'waiting_quiet' | 'asked';
+  /** Wall-clock ms the phase began. */
+  since: number;
+  timer?: NodeJS.Timeout;
+};
+
 /** How the learner did on one step of one case (invoice); becomes a `learner_attempts` row. */
 export type Attempt = {
   id: string;
@@ -57,6 +68,9 @@ export class TutorSession {
   speech: SpeechState = { userSpeaking: false, lastUserSpeechAt: null, agentSpeaking: false };
   /** Guardrails the tutor spoke about on the open record, by guardrail id. */
   intervened = new Map<string, Intervened>();
+  /** Judgment-call steps the learner has been asked to predict (once per session). */
+  readonly predictionsAsked = new Set<string>();
+  prediction: PendingPrediction | null = null;
   /** Attempts by `${caseRef}:${stepId}`, for every record of the session. */
   readonly attempts = new Map<string, Attempt>();
   private writes: Promise<void> = Promise.resolve();
@@ -96,9 +110,8 @@ export class TutorSession {
     } while (current !== this.writes);
   }
 
-  /** The attempt at a step on the open record, created on first use. */
-  attempt(stepId: string): Attempt {
-    const caseRef = this.record?.id ?? null;
+  /** The attempt at a step on a case (by default the open record), created on first use. */
+  attempt(stepId: string, caseRef: string | null = this.record?.id ?? null): Attempt {
     const key = `${caseRef}:${stepId}`;
     let attempt = this.attempts.get(key);
     if (!attempt) {

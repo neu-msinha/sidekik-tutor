@@ -1,8 +1,11 @@
 import type { Outcome, Store } from '../store/types.js';
 import type { Attempt, TutorSession } from './session.js';
 
-/** Writes the attempt's `learner_attempts` row (insert or replace by id). Nothing without a learner. */
-export async function saveAttempt(store: Store, session: TutorSession, attempt: Attempt, outcome: Outcome | null): Promise<void> {
+/**
+ * Writes the attempt's `learner_attempts` row (insert or replace by id). Nothing without a learner.
+ * Until mastery sets the final outcome, a corrected attempt says `corrected_after_intervention`.
+ */
+export async function saveAttempt(store: Store, session: TutorSession, attempt: Attempt, outcome?: Outcome): Promise<void> {
   if (!session.learnerId) return;
   await store.upsertAttempt({
     id: attempt.id,
@@ -16,7 +19,7 @@ export async function saveAttempt(store: Store, session: TutorSession, attempt: 
     prediction_grade: attempt.grade,
     // D9's confidence, for the gap flags (SCHEMA has no column for it).
     actual_action: attempt.confidence === null ? null : { prediction_confidence: attempt.confidence },
-    outcome,
+    outcome: outcome ?? (attempt.corrected ? 'corrected_after_intervention' : null),
   });
   attempt.saved = true;
 }

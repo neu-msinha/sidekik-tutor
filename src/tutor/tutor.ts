@@ -6,13 +6,16 @@ import type {
   ScreenEvent,
   SessionLifecycle,
   SpeechSignal,
+  TranscriptTurn,
   WorkMapPublished,
 } from '../contracts/index.js';
+import type { Decider } from '../clients/brain.js';
 import type { Handlers } from '../services/consumers.js';
 import type { Store } from '../store/types.js';
 import type { WorkMapCache } from '../workmaps/cache.js';
 import { ClipLinks } from './clips.js';
 import type { EffectDeps } from './interventions.js';
+import { PredictLoop } from './predict.js';
 import { presave, type PresaveResult } from './presave.js';
 import type { TutorSession } from './session.js';
 import { TutorSessions } from './sessions.js';
@@ -22,6 +25,8 @@ export type TutorDeps = {
   store: Store;
   bus: Bus;
   cache: WorkMapCache;
+  /** Brain `/internal/decide` (D9). */
+  decider: Decider;
   log: FastifyBaseLogger;
 };
 
@@ -30,11 +35,13 @@ export class Tutor implements Handlers {
   readonly sessions: TutorSessions;
   readonly clips: ClipLinks;
   private readonly effects: EffectDeps;
+  private readonly predict: PredictLoop;
 
   constructor(private readonly deps: TutorDeps) {
     this.sessions = new TutorSessions(deps.store, deps.cache, deps.log.child({ component: 'tutor' }));
     this.clips = new ClipLinks(deps.store);
     this.effects = { bus: deps.bus, store: deps.store, clips: this.clips };
+    this.predict = new PredictLoop({ bus: deps.bus, store: deps.store, decider: deps.decider });
   }
 
   /**
@@ -79,6 +86,7 @@ export class Tutor implements Handlers {
     const session = this.sessions.end(ev.session_id);
     if (!session) return;
     session.seen(ev.t_ms);
+    this.predict.stop(session);
     await session.idle();
     session.log.info('tutor session ended');
   }
@@ -101,7 +109,15 @@ export class Tutor implements Handlers {
     if (current && moved) {
       session.enterStep(current);
       session.log.info({ step_id: current.id, step_key: current.key, from: from?.key }, 'step reached');
+      this.predict.onStep(session, current);
     }
+  }
+
+  async turn(ev: Envelope<TranscriptTurn>, log: FastifyBaseLogger): Promise<void> {
+    const session = await this.sessions.resolve(ev.session_id, log);
+    if (!session) return;
+    session.seen(ev.t_ms);
+    await this.predict.onTurn(session, ev.data);
   }
 
   async speech(ev: Envelope<SpeechSignal>, log: FastifyBaseLogger): Promise<void> {

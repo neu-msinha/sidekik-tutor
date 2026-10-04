@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { pino } from 'pino';
 import type { FastifyBaseLogger } from 'fastify';
 import { buildApp, type AppDeps } from '../src/app.js';
+import { decided, stubDecider } from '../src/clients/brain.js';
 import {
   makeEvent,
   STREAMS,
@@ -12,6 +13,7 @@ import {
   type SessionLifecycle,
   type SpeechSignal,
   type StreamKey,
+  type TranscriptTurn,
 } from '../src/contracts/index.js';
 import { DEMO, demoSeed } from '../src/dev/fixtures.js';
 import { loadEnv, type Env } from '../src/env.js';
@@ -115,6 +117,27 @@ export function speechEvent(kind: SpeechSignal['kind'], sessionId = IDS.session)
   });
 }
 
+const DECISION_DEFAULTS: Record<string, [string, number]> = { D9: ['wrong', 0.9] };
+
+/** Brain stand-in: fixed [answer, confidence] per decision; D9 grades every prediction `wrong` unless told otherwise. */
+export function testDecider(answers: Record<string, [string, number]> = {}) {
+  return stubDecider((id) => {
+    const [answer, confidence] = answers[id] ?? DECISION_DEFAULTS[id] ?? ['cannot_tell', 0];
+    return decided(id, answer, confidence);
+  });
+}
+
+export function turnEvent(text: string, role: 'user' | 'agent' = 'user', sessionId = IDS.session): Envelope<TranscriptTurn> {
+  return makeEvent({
+    type: 'transcript.turn',
+    org_id: DEMO.org,
+    session_id: sessionId,
+    t_ms: 0,
+    producer: 'gateway',
+    data: { turn_id: `turn-${Math.random().toString(36).slice(2)}`, role, text, lang: 'en', source: 'live', redacted: true },
+  });
+}
+
 type Handler = (ev: Envelope<unknown>) => Promise<void>;
 
 /** In-memory bus: `deliver` hands an event to the stream's consumer the way the real bus would. */
@@ -153,6 +176,7 @@ export function buildTestApp(overrides: Partial<AppDeps> = {}) {
     env: testEnv(),
     bus: fakeBus(),
     store: demoStore(),
+    decider: testDecider(),
     healthChecks: {},
     logger: false,
     ...overrides,
@@ -164,7 +188,7 @@ export function tutorHarness(overrides: Partial<TutorDeps> = {}) {
   const bus = fakeBus();
   const store = demoStore();
   const cache = new WorkMapCache(store, silentLog());
-  const tutor = new Tutor({ store, bus, cache, log: silentLog(), ...overrides });
+  const tutor = new Tutor({ store, bus, cache, decider: testDecider(), log: silentLog(), ...overrides });
   const stop = startConsumers({ bus, handlers: tutor, log: silentLog() });
   /** Starts the demo tutor session through the bus and returns its state. */
   const start = async (sessionId = IDS.session) => {

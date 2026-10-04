@@ -6,6 +6,7 @@ import {
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
 import { requireSharedSecret } from './auth.js';
+import type { Decider } from './clients/brain.js';
 import type { Bus } from './contracts/index.js';
 import type { Env } from './env.js';
 import { HttpError } from './errors.js';
@@ -23,6 +24,7 @@ export type AppDeps = {
   /** Closed by the app on shutdown. */
   bus: Bus;
   store: Store;
+  decider: Decider;
   healthChecks: Record<string, HealthCheck>;
   logger?: FastifyServerOptions['logger'];
 };
@@ -70,7 +72,7 @@ export async function buildApp(deps: AppDeps) {
   app.decorate('requireInternal', requireSharedSecret('x-internal-token', env.SK_INTERNAL_TOKEN));
 
   const cache = new WorkMapCache(deps.store, app.log.child({ component: 'cache' }));
-  const tutor = new Tutor({ store: deps.store, bus: deps.bus, cache, log: app.log });
+  const tutor = new Tutor({ store: deps.store, bus: deps.bus, cache, decider: deps.decider, log: app.log });
 
   // Once the app is ready: load the published Work Maps, then start consuming. On close: stop
   // consuming, then close the bus.
