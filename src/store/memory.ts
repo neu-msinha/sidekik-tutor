@@ -1,4 +1,4 @@
-import type { AttemptRow, ExpertRow, InterventionRow, SessionRow, Store, WorkMapRow } from './types.js';
+import type { AttemptRow, ExpertRow, InterventionRow, MasteryRow, SessionRow, Store, WorkMapRow } from './types.js';
 
 export type ClipRow = { step_id: string; storage_path: string };
 
@@ -9,6 +9,7 @@ export type MemoryData = {
   clips: ClipRow[];
   interventions: InterventionRow[];
   learner_attempts: AttemptRow[];
+  mastery: MasteryRow[];
   /** Storage files by `${bucket}/${path}`. */
   storage: Record<string, string>;
 };
@@ -22,6 +23,7 @@ export function memoryStore(seed: Partial<MemoryData> = {}): Store & { data: Mem
     clips: [...(seed.clips ?? [])],
     interventions: [...(seed.interventions ?? [])],
     learner_attempts: [...(seed.learner_attempts ?? [])],
+    mastery: [...(seed.mastery ?? [])],
     storage: { ...seed.storage },
   };
   const clone = <T>(v: T): T => structuredClone(v);
@@ -60,6 +62,9 @@ export function memoryStore(seed: Partial<MemoryData> = {}): Store & { data: Mem
       const i = data.learner_attempts.findIndex((r) => r.id === row.id);
       if (i >= 0) data.learner_attempts[i] = clone(row);
       else data.learner_attempts.push(clone(row));
+    },
+    async insertMastery(row) {
+      data.mastery.push(clone(row));
     },
   };
 }

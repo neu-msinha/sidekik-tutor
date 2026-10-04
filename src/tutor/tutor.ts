@@ -16,6 +16,7 @@ import type { WorkMapCache } from '../workmaps/cache.js';
 import { ClipLinks } from './clips.js';
 import type { EffectDeps } from './interventions.js';
 import { LivePolicy } from './live.js';
+import { finishSession } from './mastery.js';
 import { PredictLoop } from './predict.js';
 import { presave, type PresaveResult } from './presave.js';
 import type { TutorSession } from './session.js';
@@ -95,6 +96,7 @@ export class Tutor implements Handlers {
     session.seen(ev.t_ms);
     this.predict.stop(session);
     await session.idle();
+    await finishSession(this.effects, session);
     session.log.info('tutor session ended');
   }
 

@@ -73,5 +73,9 @@ export function supabaseStore(db: SupabaseClient): Store {
     async upsertAttempt(row) {
       unwrap(await db.from('learner_attempts').upsert(row), 'upsert learner attempt');
     },
+
+    async insertMastery(row) {
+      unwrap(await db.from('mastery').insert(row), 'insert mastery');
+    },
   };
 }
