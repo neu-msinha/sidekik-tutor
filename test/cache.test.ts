@@ -42,4 +42,23 @@ describe('WorkMapCache', () => {
     expect(cache.size).toBe(0);
     expect(await cache.get(DEMO.workmap)).not.toBeNull();
   });
+
+  it('finds a step of a map it has not cached yet (after a restart)', async () => {
+    const store = demoStore();
+    const cache = new WorkMapCache(store, silentLog());
+    const s4 = store.data.work_maps.find((w) => w.id === DEMO.workmap)!.json.steps.find((s) => s.key === 'S4')!;
+    expect(cache.findStep(s4.id)).toBeNull();
+    expect((await cache.findStepAnywhere(s4.id))?.step.key).toBe('S4');
+    expect(await cache.findStepAnywhere('00000000-0000-4000-8000-0000000000ff')).toBeNull();
+  });
+
+  it('never teaches a map that breaks the WorkMap contract', async () => {
+    const store = demoStore();
+    const row = store.data.work_maps.find((w) => w.id === DEMO.workmap)!;
+    row.json = { ...row.json, steps: row.json.steps.map((s, i) => (i === 0 ? { ...s, title: '' } : s)) };
+    const cache = new WorkMapCache(store, silentLog());
+    await cache.loadPublished();
+    expect(cache.peek(DEMO.workmap)).toBeUndefined();
+    expect(await cache.get(DEMO.workmap)).toBeNull();
+  });
 });

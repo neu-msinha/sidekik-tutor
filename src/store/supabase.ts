@@ -34,6 +34,11 @@ export function supabaseStore(db: SupabaseClient): Store {
       return unwrap<WorkMapRow[]>(res, 'load published work maps');
     },
 
+    async getStepWorkMapId(stepId) {
+      const res = await db.from('work_map_steps').select('work_map_id').eq('id', stepId).maybeSingle();
+      return unwrap<{ work_map_id: string } | null>(res, 'load step')?.work_map_id ?? null;
+    },
+
     async getStepClipPath(stepId) {
       const res = await db
         .from('clips')

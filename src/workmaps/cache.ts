@@ -1,5 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify';
-import type { Guardrail, Step, WorkMap } from '../contracts/index.js';
+import { WorkMapSchema, type Guardrail, type Step, type WorkMap } from '../contracts/index.js';
 import { compileRules, type CompiledRules } from '../guardrails/rules.js';
 import type { Store, WorkMapRow } from '../store/types.js';
 
@@ -61,7 +61,7 @@ export class WorkMapCache {
   async loadPublished(): Promise<void> {
     try {
       const rows = await this.store.listPublishedWorkMaps();
-      for (const row of rows) this.keep(toTeachingMap(row, await this.expertName(row.expert_id)));
+      for (const row of rows) if (this.valid(row)) this.keep(toTeachingMap(row, await this.expertName(row.expert_id)));
       this.log.info({ work_maps: rows.length }, 'work map cache loaded');
     } catch (err) {
       this.log.error({ err }, 'loading published work maps failed; they load on first use');
@@ -94,16 +94,36 @@ export class WorkMapCache {
     return null;
   }
 
+  /** Like findStep, but loads the step's map from the database when it isn't cached (after a restart). */
+  async findStepAnywhere(stepId: string): Promise<{ map: TeachingMap; step: Step } | null> {
+    const cached = this.findStep(stepId);
+    if (cached) return cached;
+    const workmapId = await this.store.getStepWorkMapId(stepId);
+    const map = workmapId ? await this.get(workmapId) : null;
+    const step = map?.stepById.get(stepId);
+    return map && step ? { map, step } : null;
+  }
+
   private fetch(id: string): Promise<TeachingMap | null> {
     const pending = this.loading.get(id);
     if (pending) return pending;
     const load = (async () => {
       const row = await this.store.getWorkMap(id);
-      if (!row) return null;
+      if (!row || !this.valid(row)) return null;
       return this.keep(toTeachingMap(row, await this.expertName(row.expert_id)));
     })().finally(() => this.loading.delete(id));
     this.loading.set(id, load);
     return load;
+  }
+
+  /** The map JSON must match the WorkMap contract; one that doesn't is logged and never taught. */
+  private valid(row: WorkMapRow): boolean {
+    const parsed = WorkMapSchema.safeParse(row.json);
+    if (!parsed.success) {
+      const issues = parsed.error.issues.slice(0, 5).map((i) => `${i.path.join('.')}: ${i.message}`);
+      this.log.error({ workmap_id: row.id, issues }, 'work map does not match the WorkMap contract; not teaching it');
+    }
+    return parsed.success;
   }
 
   /** Caches the map; a rule that doesn't compile is logged and never applied. */

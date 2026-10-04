@@ -46,6 +46,9 @@ export function memoryStore(seed: Partial<MemoryData> = {}): Store & { data: Mem
     async listPublishedWorkMaps() {
       return clone(data.work_maps.filter((w) => w.status === 'published'));
     },
+    async getStepWorkMapId(stepId) {
+      return data.work_maps.find((w) => w.json.steps.some((s) => s.id === stepId))?.id ?? null;
+    },
     async getStepClipPath(stepId) {
       return [...data.clips].reverse().find((c) => c.step_id === stepId)?.storage_path ?? null;
     },

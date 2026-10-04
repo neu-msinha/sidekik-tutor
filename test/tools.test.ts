@@ -1,7 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { afterEach, describe, expect, it } from 'vitest';
-import { STREAMS } from '../src/contracts/index.js';
+import { STREAMS, GetExpertMomentResponseSchema, GetStepResponseSchema } from '../src/contracts/index.js';
 import { buildTestApp, DEMO, demoStore, fakeBus, IDS, INVOICE_4510, lifecycleEvent, screenEvent, SECRETS } from './helpers.js';
 
 const STEP = (n: number) => `00000000-0000-4000-8000-${(0x100 + n).toString(16).padStart(12, '0')}`;
@@ -71,12 +71,15 @@ describe('tool endpoints', () => {
       ordinal: 4,
       title: 'Code the invoice to a cost center',
       decision: 'Re-coded opex (4711) to capex (0400)',
+      quote: '…und dann geht die auf 0400, weil das eine Maschine ist.',
+      quote_en: "…and then it goes to 0400, because it's a machine.",
       is_judgment_call: true,
       reason: { quote: "…and then it goes to 0400, because it's a machine.", source_label: 'Sabine, 03:12' },
       guardrails: [expect.objectContaining({ key: 'G1' })],
       current: true,
       total_steps: 7,
     });
+    expect(GetStepResponseSchema.safeParse(current.json()).success).toBe(true);
     expect((await tool('get_step', { session_id: IDS.session, step_id: 's5' })).json()).toMatchObject({ key: 'S5', current: false });
     expect((await tool('get_step', { session_id: IDS.session, step_id: STEP(2) })).json()).toMatchObject({ key: 'S2' });
     expect((await tool('get_step', { session_id: IDS.session, step_id: 'S9' })).statusCode).toBe(404);
@@ -91,7 +94,11 @@ describe('tool endpoints', () => {
       label: 'Sabine, 03:12',
       clip_url: 'https://storage.example/captures/clips/s4.mp4?expires_in=600',
     });
-    expect((await tool('get_expert_moment', { step_id: STEP(5) })).json()).toMatchObject({ clip_url: null });
+    expect(GetExpertMomentResponseSchema.safeParse((await tool('get_expert_moment', { step_id: STEP(4) })).json()).success).toBe(true);
+    // No clip cut for S5 yet: the moment comes without clip_url rather than with null.
+    const s5 = (await tool('get_expert_moment', { step_id: STEP(5) })).json();
+    expect(s5).toMatchObject({ step_id: STEP(5), quote: expect.any(String) });
+    expect(s5).not.toHaveProperty('clip_url');
     expect((await tool('get_expert_moment', { step_id: 'nope' })).statusCode).toBe(404);
   });
 

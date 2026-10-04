@@ -1,4 +1,6 @@
-import type { MasterySummary, WorkMap, WorkMapStatus } from '../contracts/index.js';
+import type { MasterySummary, WorkMap } from '../contracts/index.js';
+
+export type WorkMapStatus = WorkMap['status'];
 
 // Rows as SCHEMA.md defines them; only the columns the tutor reads or writes.
 
@@ -85,6 +87,8 @@ export interface Store {
   getWorkMap(id: string): Promise<WorkMapRow | null>;
   /** Every Work Map with status `published`, for the cache at boot. */
   listPublishedWorkMaps(): Promise<WorkMapRow[]>;
+  /** The Work Map a step belongs to (`work_map_steps.work_map_id`), or null. */
+  getStepWorkMapId(stepId: string): Promise<string | null>;
   /** Storage path (bucket `captures`) of perception's newest clip for the step, if any. */
   getStepClipPath(stepId: string): Promise<string | null>;
   signStorageUrl(bucket: string, path: string, ttlS: number): Promise<string>;
