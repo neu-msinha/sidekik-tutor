@@ -69,6 +69,16 @@ export type MasteryRow = {
   summary: MasterySummary;
 };
 
+/** tutor's `gap_flags`: one per (work_map_id, step_id, guardrail_id, kind). */
+export type GapFlagRow = {
+  org_id: string;
+  work_map_id: string;
+  step_id: string | null;
+  guardrail_id: string | null;
+  kind: 'guardrail_tripped' | 'prediction_unsure';
+  learner_ids: string[];
+};
+
 export interface Store {
   getSession(id: string): Promise<SessionRow | null>;
   getExpert(id: string): Promise<ExpertRow | null>;
@@ -85,4 +95,13 @@ export interface Store {
   /** Inserts the attempt or replaces it by id. */
   upsertAttempt(row: AttemptRow): Promise<void>;
   insertMastery(row: MasteryRow): Promise<void>;
+  /** Distinct learners with an `interventions` row for the guardrail, across sessions. */
+  learnersIntervenedOn(guardrailId: string): Promise<string[]>;
+  /** Distinct learners whose prediction for the step D9 graded with confidence below `below`. */
+  learnersUnsureOn(stepId: string, below: number): Promise<string[]>;
+  /**
+   * Inserts the flag, or adds its learners to the existing one (reopening it if it was resolved).
+   * Returns whether it was new.
+   */
+  upsertGapFlag(row: GapFlagRow): Promise<{ created: boolean }>;
 }
