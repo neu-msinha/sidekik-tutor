@@ -5,7 +5,7 @@ import {
   validatorCompiler,
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
-import { requireSharedSecret } from './auth.js';
+import { requireBearer, requireSharedSecret } from './auth.js';
 import type { Decider } from './clients/brain.js';
 import type { Bus } from './contracts/index.js';
 import type { Env } from './env.js';
@@ -13,6 +13,7 @@ import { HttpError } from './errors.js';
 import { genReqId, registerRequestLogging } from './logging.js';
 import { healthRoutes, type HealthCheck } from './routes/health.js';
 import { internalRoutes } from './routes/internal.js';
+import { mcpRoutes } from './routes/mcp.js';
 import { startConsumers } from './services/consumers.js';
 import type { Store } from './store/types.js';
 import { Tutor } from './tutor/tutor.js';
@@ -70,6 +71,7 @@ export async function buildApp(deps: AppDeps) {
 
   registerRequestLogging(app);
   app.decorate('requireInternal', requireSharedSecret('x-internal-token', env.SK_INTERNAL_TOKEN));
+  app.decorate('requireToolBearer', requireBearer(env.SK_TOOL_SECRET));
 
   const cache = new WorkMapCache(deps.store, app.log.child({ component: 'cache' }));
   const tutor = new Tutor({ store: deps.store, bus: deps.bus, cache, decider: deps.decider, log: app.log });
@@ -88,6 +90,7 @@ export async function buildApp(deps: AppDeps) {
 
   await app.register(healthRoutes, { version: VERSION, checks: deps.healthChecks });
   await app.register(internalRoutes, { tutor });
+  await app.register(mcpRoutes, { tools: tutor.tools });
 
   return Object.assign(app, { tutor, cache });
 }

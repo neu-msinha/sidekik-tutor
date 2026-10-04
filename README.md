@@ -98,6 +98,16 @@ Pre-save check (`src/tutor/presave.ts`), DESIGN §3: `POST /internal/presave {se
 - Every guardrail spoken about gets an `interventions` row (`trigger: presave`). One that no longer fires is corrected: its row is marked `resolved` and the step's `learner_attempts` row gets `corrected_after_intervention`.
 - Capture sessions and sessions that aren't live tutor sessions are always allowed. Without a learner (fixtures) nothing is written, but the check still blocks and speaks.
 
+Agent tools (`src/tutor/tools.ts`), DESIGN §2. Read-only: they never publish commands or write rows.
+
+| Tool | Route (gateway proxies, `X-Internal-Token`) | Answer |
+|---|---|---|
+| `check_guardrails` | `POST /internal/tools/check_guardrails {session_id, state?}` | every guardrail that fires on the submitted (or tracked) record, blocking first, with the expert's quote; `allow_save`; the map's guardrails |
+| `get_step` | `POST /internal/tools/get_step {session_id, step_id?}` | the requested step (id or key, e.g. `S4`) or the current one: decision, reason in the expert's words, guardrails |
+| `get_expert_moment` | `POST /internal/tools/get_expert_moment {step_id}` | `{step_id, quote, quote_en, label, clip_url}`; the clip URL is signed for 10 minutes, null without a clip |
+
+A session that isn't a live tutor session is a 404. MCP (`src/routes/mcp.ts`): `POST /mcp` (`https://mcp.sidekik.live/mcp`), streamable HTTP in stateless mode (a fresh server per request, JSON responses), `Authorization: Bearer $SK_TOOL_SECRET`. It exposes the three tools plus `export_agent_rules(workmap_id)`, which returns mapper's published `AGENT_RULES.md` and `guardrails.jsonlogic.json` from Storage (`workmaps/org/{org}/{id}/v{n}/`). Tool failures come back as MCP tool errors (`isError`) the agent can read. `GET`/`DELETE /mcp` answer 405.
+
 Bus handling: every handler is idempotent on `event.id`, every event of a replay session (`mode:"replay"`) is ignored, and capture sessions are remembered so their screen events cost no database lookup.
 
 | Env var | What it is |

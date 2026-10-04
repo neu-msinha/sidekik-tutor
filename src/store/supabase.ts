@@ -51,6 +51,17 @@ export function supabaseStore(db: SupabaseClient): Store {
       return data.signedUrl;
     },
 
+    async downloadText(bucket, path) {
+      const { data, error } = await db.storage.from(bucket).download(path);
+      if (error) {
+        // storage-js: a missing object is a StorageApiError with status 404 or code NoSuchKey.
+        const e = error as { status?: number; statusCode?: string; code?: string };
+        if (e.status === 404 || e.statusCode === '404' || e.code === 'NoSuchKey') return null;
+        throw new Error(`download ${bucket}/${path}: ${error.message}`);
+      }
+      return data.text();
+    },
+
     async insertIntervention(row) {
       unwrap(await db.from('interventions').insert(row), 'insert intervention');
     },
