@@ -33,5 +33,34 @@ export function supabaseStore(db: SupabaseClient): Store {
       const res = await db.from('work_maps').select(WORK_MAP_COLUMNS).eq('status', 'published');
       return unwrap<WorkMapRow[]>(res, 'load published work maps');
     },
+
+    async getStepClipPath(stepId) {
+      const res = await db
+        .from('clips')
+        .select('storage_path')
+        .eq('step_id', stepId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return unwrap<{ storage_path: string } | null>(res, 'load clip')?.storage_path ?? null;
+    },
+
+    async signStorageUrl(bucket, path, ttlS) {
+      const { data, error } = await db.storage.from(bucket).createSignedUrl(path, ttlS);
+      if (error || !data) throw new Error(`sign ${bucket}/${path}: ${error?.message ?? 'no url'}`);
+      return data.signedUrl;
+    },
+
+    async insertIntervention(row) {
+      unwrap(await db.from('interventions').insert(row), 'insert intervention');
+    },
+
+    async resolveIntervention(id) {
+      unwrap(await db.from('interventions').update({ resolved: true }).eq('id', id), 'resolve intervention');
+    },
+
+    async upsertAttempt(row) {
+      unwrap(await db.from('learner_attempts').upsert(row), 'upsert learner attempt');
+    },
   };
 }

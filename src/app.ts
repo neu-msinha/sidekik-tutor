@@ -11,6 +11,7 @@ import type { Env } from './env.js';
 import { HttpError } from './errors.js';
 import { genReqId, registerRequestLogging } from './logging.js';
 import { healthRoutes, type HealthCheck } from './routes/health.js';
+import { internalRoutes } from './routes/internal.js';
 import { startConsumers } from './services/consumers.js';
 import type { Store } from './store/types.js';
 import { Tutor } from './tutor/tutor.js';
@@ -84,6 +85,7 @@ export async function buildApp(deps: AppDeps) {
   });
 
   await app.register(healthRoutes, { version: VERSION, checks: deps.healthChecks });
+  await app.register(internalRoutes, { tutor });
 
   return Object.assign(app, { tutor, cache });
 }

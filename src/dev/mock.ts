@@ -1,11 +1,14 @@
 // `pnpm dev:mock`: the tutor against real Redis with no teammates' services and no Supabase.
 // The store is in memory, seeded with the published demo Work Map and Lena's tutor session
-// (dev/fixtures/seed.json). Drive it with `pnpm dev:replay dev/fixtures/tutor_lena.jsonl`.
+// (dev/fixtures/seed.json), plus a stand-in clip for S4 (signed URLs point at storage.example).
+// Drive it with `pnpm dev:replay dev/fixtures/tutor_lena.jsonl`, and try the pre-save check with
+// `curl -X POST localhost:8084/internal/presave -H 'x-internal-token: …' -H 'content-type: application/json'
+//   -d '{"session_id":"fixture-tutor-lena","state":{…}}'`.
 import { buildApp } from '../app.js';
 import { createBus } from '../contracts/index.js';
 import { loadEnv } from '../env.js';
 import { memoryStore } from '../store/memory.js';
-import { demoSeed } from './fixtures.js';
+import { DEMO_STEPS, demoSeed } from './fixtures.js';
 
 const DEV_SECRET = 'dev-mock-secret-not-for-production-0000000000';
 const env = loadEnv({
@@ -19,7 +22,10 @@ const env = loadEnv({
   ...process.env,
 });
 
-const store = memoryStore(demoSeed());
+const store = memoryStore({
+  ...demoSeed(),
+  clips: [{ step_id: DEMO_STEPS.S4, storage_path: 'org/demo/sessions/sabine/clips/s4.mp4' }],
+});
 
 let app: Awaited<ReturnType<typeof buildApp>>;
 const bus = createBus(env.REDIS_URL, 'tutor', {
