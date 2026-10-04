@@ -76,12 +76,14 @@ export async function buildApp(deps: AppDeps) {
   const cache = new WorkMapCache(deps.store, app.log.child({ component: 'cache' }));
   const tutor = new Tutor({ store: deps.store, bus: deps.bus, cache, decider: deps.decider, log: app.log });
 
-  // Once the app is ready: load the published Work Maps, then start consuming. On close: stop
-  // consuming, then close the bus.
+  // Once the app is ready: start consuming, and load the published Work Maps in the background, so
+  // a slow or unreachable database doesn't hold up listening (a session's map loads on first use
+  // anyway). On close: stop consuming, then close the bus.
   let stopConsumers: (() => void) | undefined;
+  let cacheLoaded: Promise<void> = Promise.resolve();
   app.addHook('onReady', async () => {
-    await cache.loadPublished();
     stopConsumers = startConsumers({ bus: deps.bus, handlers: tutor, log: app.log.child({ component: 'consumers' }) });
+    cacheLoaded = cache.loadPublished();
   });
   app.addHook('onClose', async () => {
     stopConsumers?.();
@@ -92,7 +94,12 @@ export async function buildApp(deps: AppDeps) {
   await app.register(internalRoutes, { tutor });
   await app.register(mcpRoutes, { tools: tutor.tools });
 
-  return Object.assign(app, { tutor, cache });
+  return Object.assign(app, {
+    tutor,
+    cache,
+    /** Resolves once the boot load of published Work Maps has finished (or failed and been logged). */
+    cacheLoaded: () => cacheLoaded,
+  });
 }
 
 export type App = Awaited<ReturnType<typeof buildApp>>;
