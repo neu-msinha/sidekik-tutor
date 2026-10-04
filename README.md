@@ -73,6 +73,8 @@ The service checks every env var at boot and exits with a list of the ones that 
 
 Runtime (`src/tutor/`): a tutor session's state is created on its lifecycle `started` (the learner and Work Map come from its `sessions` row), or on its first event after a restart. Screen events update the open record (`invoiceState`); speech signals track whether the learner is talking. Work Maps are cached in memory (`src/workmaps/cache.ts`): every published map at boot, a map again on `sk:workmap.published`, and any other map a session refers to on first use.
 
+Rules (`src/guardrails/rules.ts`): each cached Work Map's guardrails are compiled once. A rule must be a single-operator JSON-Logic expression over the normalized `InvoiceState` variables that evaluates on test records; one that doesn't is logged and never applied. Evaluation is deterministic, with no model calls. A guardrail **blocks** the save when its consequence requires a field value (G1: cost center 0400) or blocks outright (G2). A guardrail whose consequence is only an action (G3 ask the controller, G4 hold, G5 second approval) is **reported** but doesn't block, since editing the record can't satisfy it; in the DESIGN §4 demo, G3 still fires on the final save, which must be allowed. Violations come back blocking first, then in step order. `test/rules.test.ts` runs the §4 demo case and G1–G5 against the seed map.
+
 Bus handling: every handler is idempotent on `event.id`, every event of a replay session (`mode:"replay"`) is ignored, and capture sessions are remembered so their screen events cost no database lookup.
 
 | Env var | What it is |

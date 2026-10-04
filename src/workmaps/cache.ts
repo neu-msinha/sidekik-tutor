@@ -1,5 +1,6 @@
 import type { FastifyBaseLogger } from 'fastify';
 import type { Guardrail, Step, WorkMap } from '../contracts/index.js';
+import { compileRules, type CompiledRules } from '../guardrails/rules.js';
 import type { Store, WorkMapRow } from '../store/types.js';
 
 /** A Work Map ready to teach from: the map plus lookups the runtime needs on every event. */
@@ -14,6 +15,8 @@ export type TeachingMap = {
   guardrailById: Map<string, Guardrail>;
   /** The first step (by ordinal) that lists the guardrail; a guardrail no step lists has none. */
   stepOfGuardrail: Map<string, Step>;
+  /** The guardrails compiled to JSON-Logic, blocking first. */
+  rules: CompiledRules;
 };
 
 export function toTeachingMap(row: WorkMapRow, expertName: string): TeachingMap {
@@ -24,6 +27,7 @@ export function toTeachingMap(row: WorkMapRow, expertName: string): TeachingMap 
     for (const id of step.guardrail_ids) if (!stepOfGuardrail.has(id)) stepOfGuardrail.set(id, step);
   }
   return {
+    rules: compileRules(workmap.guardrails, stepOfGuardrail),
     workmap,
     orgId: row.org_id,
     expertName,
@@ -44,20 +48,23 @@ export class WorkMapCache {
   private readonly loading = new Map<string, Promise<TeachingMap | null>>();
   private readonly expertNames = new Map<string, string>();
 
-  constructor(private readonly store: Store) {}
+  constructor(
+    private readonly store: Store,
+    private readonly log: FastifyBaseLogger,
+  ) {}
 
   get size(): number {
     return this.maps.size;
   }
 
   /** Loads every published map. A failure is logged; maps then load on first use. */
-  async loadPublished(log: FastifyBaseLogger): Promise<void> {
+  async loadPublished(): Promise<void> {
     try {
       const rows = await this.store.listPublishedWorkMaps();
-      for (const row of rows) this.maps.set(row.id, toTeachingMap(row, await this.expertName(row.expert_id)));
-      log.info({ work_maps: rows.length }, 'work map cache loaded');
+      for (const row of rows) this.keep(toTeachingMap(row, await this.expertName(row.expert_id)));
+      this.log.info({ work_maps: rows.length }, 'work map cache loaded');
     } catch (err) {
-      log.error({ err }, 'loading published work maps failed; they load on first use');
+      this.log.error({ err }, 'loading published work maps failed; they load on first use');
     }
   }
 
@@ -93,12 +100,19 @@ export class WorkMapCache {
     const load = (async () => {
       const row = await this.store.getWorkMap(id);
       if (!row) return null;
-      const map = toTeachingMap(row, await this.expertName(row.expert_id));
-      this.maps.set(id, map);
-      return map;
+      return this.keep(toTeachingMap(row, await this.expertName(row.expert_id)));
     })().finally(() => this.loading.delete(id));
     this.loading.set(id, load);
     return load;
+  }
+
+  /** Caches the map; a rule that doesn't compile is logged and never applied. */
+  private keep(map: TeachingMap): TeachingMap {
+    for (const bad of map.rules.invalid) {
+      this.log.error({ workmap_id: map.workmap.id, org_id: map.orgId, ...bad }, 'guardrail rule does not compile; it is not applied');
+    }
+    this.maps.set(map.workmap.id, map);
+    return map;
   }
 
   private async expertName(expertId: string): Promise<string> {

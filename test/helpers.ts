@@ -162,7 +162,7 @@ export function buildTestApp(overrides: Partial<AppDeps> = {}) {
 export function tutorHarness(overrides: Partial<TutorDeps> = {}) {
   const bus = fakeBus();
   const store = demoStore();
-  const cache = new WorkMapCache(store);
+  const cache = new WorkMapCache(store, silentLog());
   const tutor = new Tutor({ store, bus, cache, log: silentLog(), ...overrides });
   const stop = startConsumers({ bus, handlers: tutor, log: silentLog() });
   /** Starts the demo tutor session through the bus and returns its state. */
