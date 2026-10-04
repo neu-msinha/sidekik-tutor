@@ -90,7 +90,8 @@ describe('bus wiring', () => {
   it('reloads a Work Map on workmap.published', async () => {
     const { bus, cache, store } = tutorHarness();
     const row = store.data.work_maps[0]!;
-    store.data.work_maps.push({ ...row, id: 'map-v2', version: 2, json: { ...row.json, id: 'map-v2', version: 2 } });
+    const v2 = '00000000-0000-4000-8000-0000000000a2'; // the WorkMap contract requires a uuid id
+    store.data.work_maps.push({ ...row, id: v2, version: 2, json: { ...row.json, id: v2, version: 2 } });
     await bus.deliver(
       STREAMS.workmapPublished,
       makeEvent({
@@ -99,10 +100,10 @@ describe('bus wiring', () => {
         session_id: 'capture-session',
         t_ms: 0,
         producer: 'mapper',
-        data: { workmap_id: 'map-v2', workflow_id: DEMO.workflow, version: 2 },
+        data: { workmap_id: v2, workflow_id: DEMO.workflow, version: 2 },
       }),
     );
-    expect(cache.peek('map-v2')?.workmap.version).toBe(2);
+    expect(cache.peek(v2)?.workmap.version).toBe(2);
   });
 
   it('re-runs a handler that failed, since the bus retries the same event', async () => {

@@ -76,11 +76,11 @@ export function startConsumers(deps: ConsumerDeps): () => void {
   });
 
   const stops = [
-    bus.consume<SessionLifecycle>(STREAMS.lifecycle, onLifecycle),
-    bus.consume<WorkMapPublished>(STREAMS.workmapPublished, route((ev, log) => handlers.workmapPublished(ev, log))),
-    bus.consume<ScreenEvent>(STREAMS.screen, route((ev, log) => handlers.screen(ev, log))),
-    bus.consume<SpeechSignal>(STREAMS.speech, route((ev, log) => handlers.speech(ev, log))),
-    bus.consume<TranscriptTurn>(STREAMS.turns, route((ev, log) => handlers.turn(ev, log))),
+    bus.consume(STREAMS.lifecycle, onLifecycle),
+    bus.consume(STREAMS.workmapPublished, route((ev, log) => handlers.workmapPublished(ev, log))),
+    bus.consume(STREAMS.screen, route((ev, log) => handlers.screen(ev, log))),
+    bus.consume(STREAMS.speech, route((ev, log) => handlers.speech(ev, log))),
+    bus.consume(STREAMS.turns, route((ev, log) => handlers.turn(ev, log))),
   ];
   return () => {
     for (const stop of stops) stop();

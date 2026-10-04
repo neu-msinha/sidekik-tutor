@@ -173,3 +173,13 @@ describe('dev brain D9', () => {
     expect(devD9({ step, prediction }).answer).toBe(answer);
   });
 });
+
+describe('caseLabel', () => {
+  it('formats the amount, and survives a currency read off the screen that is not an ISO code', async () => {
+    const { caseLabel } = await import('../src/tutor/words.js');
+    expect(caseLabel({ net_amount: 7200, currency: 'EUR', category: 'equipment', supplier: 'Antriebstechnik Nord' })).toBe(
+      '€7,200 equipment from Antriebstechnik Nord',
+    );
+    expect(caseLabel({ net_amount: 7200, currency: '€', category: 'equipment' })).toBe('7200 € equipment');
+  });
+});

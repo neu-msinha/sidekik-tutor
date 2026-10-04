@@ -7,6 +7,8 @@
 import { buildApp } from '../app.js';
 import { createBus } from '../contracts/index.js';
 import { loadEnv } from '../env.js';
+import { createServiceLogger } from '../logger.js';
+import { redisHealth } from '../redis-health.js';
 import { memoryStore } from '../store/memory.js';
 import { devBrain } from './brain.js';
 import { DEMO_STEPS, demoSeed } from './fixtures.js';
@@ -28,25 +30,21 @@ const store = memoryStore({
   clips: [{ step_id: DEMO_STEPS.S4, storage_path: 'org/demo/sessions/sabine/clips/s4.mp4' }],
 });
 
-let app: Awaited<ReturnType<typeof buildApp>>;
-const bus = createBus(env.REDIS_URL, 'tutor', {
-  warn: (obj, msg) => app.log.warn(obj, msg),
-  error: (obj, msg) => app.log.error(obj, msg),
-});
+const log = createServiceLogger(env.LOG_LEVEL);
+const bus = createBus(env.REDIS_URL, 'tutor', { logger: log.child({ component: 'bus' }) });
+const redis = redisHealth(env.REDIS_URL, log);
 
-app = await buildApp({
+const app = await buildApp({
   env,
   bus,
   store,
   decider: devBrain,
   healthChecks: {
-    redis: async () => {
-      await bus.redis.ping();
-    },
+    redis: redis.check,
   },
-  logger: { level: env.LOG_LEVEL, transport: { target: 'pino-pretty' } },
+  loggerInstance: log,
 });
-bus.redis.on('error', (err) => app.log.warn({ err: err.message }, 'redis error'));
+app.addHook('onClose', redis.close);
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, async () => {

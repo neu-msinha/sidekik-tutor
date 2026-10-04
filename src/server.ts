@@ -2,37 +2,29 @@ import { buildApp } from './app.js';
 import { httpDecider } from './clients/brain.js';
 import { createBus } from './contracts/index.js';
 import { loadEnv } from './env.js';
+import { createServiceLogger } from './logger.js';
+import { redisHealth } from './redis-health.js';
 import { supabaseStore } from './store/supabase.js';
 import { createSupabase, supabaseHealth } from './supabase.js';
 
 const env = loadEnv();
 const supabase = createSupabase(env);
-const pretty = process.env.NODE_ENV !== 'production' && process.stdout.isTTY;
+const log = createServiceLogger(env.LOG_LEVEL);
+const bus = createBus(env.REDIS_URL, 'tutor', { logger: log.child({ component: 'bus' }) });
+const redis = redisHealth(env.REDIS_URL, log);
 
-let app: Awaited<ReturnType<typeof buildApp>>;
-const bus = createBus(env.REDIS_URL, 'tutor', {
-  warn: (obj, msg) => app.log.warn(obj, msg),
-  error: (obj, msg) => app.log.error(obj, msg),
-});
-
-app = await buildApp({
+const app = await buildApp({
   env,
   bus,
   store: supabaseStore(supabase),
   decider: httpDecider(env.BRAIN_URL, env.SK_INTERNAL_TOKEN),
   healthChecks: {
     supabase: supabaseHealth(supabase),
-    redis: async () => {
-      await bus.redis.ping();
-    },
+    redis: redis.check,
   },
-  logger: {
-    level: env.LOG_LEVEL,
-    ...(pretty && { transport: { target: 'pino-pretty' } }),
-  },
+  loggerInstance: log,
 });
-// ioredis reconnects on its own; log instead of crashing on an unhandled 'error' event.
-bus.redis.on('error', (err) => app.log.warn({ err: err.message }, 'redis error'));
+app.addHook('onClose', redis.close);
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, async () => {

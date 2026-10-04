@@ -38,13 +38,17 @@ export function interventionText(
 }
 
 /** "€7,200 equipment from Antriebstechnik Nord", from whatever the record has. */
+/** "€7,200"; a currency read off the screen that isn't an ISO code (e.g. "€") falls back to "7200 €". */
+function money(amount: number, currency = 'EUR'): string {
+  try {
+    return new Intl.NumberFormat('en', { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount);
+  } catch {
+    return `${amount} ${currency}`.trim();
+  }
+}
+
 export function caseLabel(state: InvoiceState): string {
-  const amount =
-    state.net_amount === undefined
-      ? undefined
-      : new Intl.NumberFormat('en', { style: 'currency', currency: state.currency ?? 'EUR', maximumFractionDigits: 0 }).format(
-          state.net_amount,
-        );
+  const amount = state.net_amount === undefined ? undefined : money(state.net_amount, state.currency);
   return [amount, state.category, state.supplier && `from ${state.supplier}`].filter(Boolean).join(' ');
 }
 

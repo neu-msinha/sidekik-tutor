@@ -6,6 +6,9 @@ import { saveAttempt } from './attempts.js';
 import type { EffectDeps } from './interventions.js';
 import type { Attempt, TutorSession } from './session.js';
 
+/** Stands in for `learner_id` in a summary when the session has no learner row. */
+export const ANONYMOUS_LEARNER = 'anonymous';
+
 const RANK: Record<Outcome, number> = {
   not_attempted: 0,
   corrected_after_intervention: 1,
@@ -68,7 +71,9 @@ export function masterySummary(session: TutorSession): MasterySummary {
   return {
     session_id: session.id,
     workmap_id: session.workmapId,
-    learner_id: session.learnerId ?? '',
+    // The contract's MasterySummary requires a learner_id. A session with no learner (e.g. the demo
+    // seed's learners have no user) still shows the panel; nothing is written to the database for it.
+    learner_id: session.learnerId ?? ANONYMOUS_LEARNER,
     steps,
     practice_next: practice,
     counts,

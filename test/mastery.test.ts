@@ -116,6 +116,7 @@ describe('mastery on ended (DESIGN §7)', () => {
     await bus.deliver(STREAMS.screen, screenEvent({ type: 'record_opened', entity: { kind: 'invoice', id: '4510' } }));
     await bus.deliver(STREAMS.lifecycle, lifecycleEvent({ event: 'ended', phase: 'done' }));
     expect(bus.commands().map((c) => c.type)).toEqual(['summary']);
+    expect(bus.commands()[0]).toMatchObject({ mastery: { learner_id: 'anonymous' } });
     expect(store.data.mastery).toEqual([]);
     expect(store.data.learner_attempts).toEqual([]);
   });

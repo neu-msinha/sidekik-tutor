@@ -51,18 +51,23 @@ export class TutorTools {
     };
   }
 
-  /** `get_expert_moment`: the expert's words and screen moment for a step, with a 10-minute clip URL. */
+  /**
+   * `get_expert_moment` (GetExpertMomentResponseSchema): the expert's words for a step and a
+   * 10-minute clip URL. A step the expert gave no reason for has no moment (404). `clip_url` is left
+   * out while perception hasn't cut the clip yet, rather than failing the whole tool.
+   */
   async getExpertMoment(input: { step_id: string }) {
-    const found = this.deps.cache.findStep(input.step_id);
+    const found = await this.deps.cache.findStepAnywhere(input.step_id);
     if (!found) throw notFound('Step not found in any published Work Map');
     const { map, step } = found;
-    const quote = step.reason?.quote ?? null;
+    if (!step.reason) throw notFound(`${map.expertName} gave no reason for step ${step.key}`);
+    const clipUrl = await this.deps.clips.forStep(step.id);
     return {
       step_id: step.id,
-      quote,
-      quote_en: step.reason?.quote_en ?? null,
-      label: step.reason?.source_label ?? `${map.expertName}, ${step.screen_moment.label}`,
-      clip_url: await this.deps.clips.forStep(step.id),
+      quote: step.reason.quote,
+      ...(step.reason.quote_en && { quote_en: step.reason.quote_en }),
+      label: step.reason.source_label,
+      ...(clipUrl && { clip_url: clipUrl }),
     };
   }
 
@@ -106,6 +111,9 @@ export class TutorTools {
       ordinal: step.ordinal,
       title: step.title,
       decision: step.decision,
+      // GetStepResponseSchema: the expert's words at the top level, original and English.
+      ...(step.reason && { quote: step.reason.quote }),
+      ...(step.reason?.quote_en && { quote_en: step.reason.quote_en }),
       is_judgment_call: step.is_judgment_call,
       reason: step.reason
         ? { quote: quoteFor(map, session.language, step.reason), source_label: step.reason.source_label }
