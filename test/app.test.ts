@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { STREAMS } from '../src/contracts/index.js';
-import { buildTestApp, DEMO, fakeBus, SECRETS } from './helpers.js';
+import { buildTestApp, DEMO, demoStore, fakeBus, SECRETS } from './helpers.js';
 
 describe('app', () => {
   it('reports healthy dependencies with the package version', async () => {
@@ -47,6 +47,19 @@ describe('app', () => {
     await app.close();
   });
 
+  it('does not wait for the Work Map cache to be ready', async () => {
+    const store = demoStore();
+    let release: () => void = () => {};
+    store.listPublishedWorkMaps = () => new Promise((resolve) => (release = () => resolve([])));
+    const app = await buildTestApp({ store });
+    await app.ready();
+    const res = await app.inject({ method: 'GET', url: '/healthz' });
+    expect(res.statusCode).toBe(200);
+    release();
+    await app.cacheLoaded();
+    await app.close();
+  });
+
   it('loads published Work Maps and starts consuming once ready; stops and closes the bus on close', async () => {
     const bus = fakeBus();
     let closed = false;
@@ -57,6 +70,7 @@ describe('app', () => {
     expect(bus.consuming(STREAMS.lifecycle)).toBe(false);
 
     await app.ready();
+    await app.cacheLoaded();
     expect(app.cache.peek(DEMO.workmap)?.steps.map((s) => s.key)).toEqual(['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7']);
     for (const stream of [STREAMS.lifecycle, STREAMS.workmapPublished, STREAMS.screen, STREAMS.speech]) {
       expect(bus.consuming(stream)).toBe(true);
