@@ -68,14 +68,14 @@ export async function buildApp(deps: AppDeps) {
   registerRequestLogging(app);
   app.decorate('requireInternal', requireSharedSecret('x-internal-token', env.SK_INTERNAL_TOKEN));
 
-  const cache = new WorkMapCache(deps.store);
+  const cache = new WorkMapCache(deps.store, app.log.child({ component: 'cache' }));
   const tutor = new Tutor({ store: deps.store, bus: deps.bus, cache, log: app.log });
 
   // Once the app is ready: load the published Work Maps, then start consuming. On close: stop
   // consuming, then close the bus.
   let stopConsumers: (() => void) | undefined;
   app.addHook('onReady', async () => {
-    await cache.loadPublished(app.log.child({ component: 'cache' }));
+    await cache.loadPublished();
     stopConsumers = startConsumers({ bus: deps.bus, handlers: tutor, log: app.log.child({ component: 'consumers' }) });
   });
   app.addHook('onClose', async () => {

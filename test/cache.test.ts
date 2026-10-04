@@ -4,8 +4,8 @@ import { DEMO, demoStore, silentLog } from './helpers.js';
 
 describe('WorkMapCache', () => {
   it('loads published maps at boot with the expert name and step lookups', async () => {
-    const cache = new WorkMapCache(demoStore());
-    await cache.loadPublished(silentLog());
+    const cache = new WorkMapCache(demoStore(), silentLog());
+    await cache.loadPublished();
     const map = cache.peek(DEMO.workmap)!;
     expect(map.expertName).toBe('Sabine');
     expect(map.orgId).toBe(DEMO.org);
@@ -25,7 +25,7 @@ describe('WorkMapCache', () => {
       loads++;
       return getWorkMap(id);
     };
-    const cache = new WorkMapCache(store);
+    const cache = new WorkMapCache(store, silentLog());
     const [a, b] = await Promise.all([cache.get(DEMO.workmap), cache.get(DEMO.workmap)]);
     expect(a).toBe(b);
     expect(loads).toBe(1);
@@ -37,8 +37,8 @@ describe('WorkMapCache', () => {
     store.listPublishedWorkMaps = async () => {
       throw new Error('db down');
     };
-    const cache = new WorkMapCache(store);
-    await cache.loadPublished(silentLog());
+    const cache = new WorkMapCache(store, silentLog());
+    await cache.loadPublished();
     expect(cache.size).toBe(0);
     expect(await cache.get(DEMO.workmap)).not.toBeNull();
   });
