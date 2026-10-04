@@ -1,4 +1,4 @@
-import type { Guardrail } from '../contracts/index.js';
+import type { Guardrail, InvoiceState, Step } from '../contracts/index.js';
 import type { CompiledRule } from '../guardrails/rules.js';
 import type { TeachingMap } from '../workmaps/cache.js';
 
@@ -35,4 +35,22 @@ export function interventionText(
   const parts = [OPENERS[tone], explain(map, language, main.guardrail)];
   if (also.length > 0) parts.push(`Also: ${also.map((r) => explain(map, language, r.guardrail)).join(' ')}`);
   return parts.join(' ');
+}
+
+/** "€7,200 equipment from Antriebstechnik Nord", from whatever the record has. */
+export function caseLabel(state: InvoiceState): string {
+  const amount =
+    state.net_amount === undefined
+      ? undefined
+      : new Intl.NumberFormat('en', { style: 'currency', currency: state.currency ?? 'EUR', maximumFractionDigits: 0 }).format(
+          state.net_amount,
+        );
+  return [amount, state.category, state.supplier && `from ${state.supplier}`].filter(Boolean).join(' ');
+}
+
+/** The `predict` prompt: "€7,200 equipment from …: code the invoice to a cost center. What would Sabine do here, and why?" */
+export function predictPrompt(map: TeachingMap, state: InvoiceState, step: Step): string {
+  const title = step.title.charAt(0).toLowerCase() + step.title.slice(1);
+  const label = caseLabel(state);
+  return `${label ? `${label}: ` : ''}${title}. What would ${map.expertName} do here, and why?`;
 }

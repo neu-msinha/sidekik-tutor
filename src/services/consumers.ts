@@ -6,6 +6,7 @@ import {
   type ScreenEvent,
   type SessionLifecycle,
   type SpeechSignal,
+  type TranscriptTurn,
   type WorkMapPublished,
 } from '../contracts/index.js';
 import { RecentIds } from './recent-ids.js';
@@ -23,6 +24,8 @@ export type Handlers = {
   /** Every screen event of a non-replay session; the handler ignores sessions that aren't tutor sessions. */
   screen(ev: Envelope<ScreenEvent>, log: FastifyBaseLogger): Promise<void>;
   speech(ev: Envelope<SpeechSignal>, log: FastifyBaseLogger): Promise<void>;
+  /** Transcript turns: learner answers to predictions. */
+  turn(ev: Envelope<TranscriptTurn>, log: FastifyBaseLogger): Promise<void>;
 };
 
 export type ConsumerDeps = {
@@ -77,6 +80,7 @@ export function startConsumers(deps: ConsumerDeps): () => void {
     bus.consume<WorkMapPublished>(STREAMS.workmapPublished, route((ev, log) => handlers.workmapPublished(ev, log))),
     bus.consume<ScreenEvent>(STREAMS.screen, route((ev, log) => handlers.screen(ev, log))),
     bus.consume<SpeechSignal>(STREAMS.speech, route((ev, log) => handlers.speech(ev, log))),
+    bus.consume<TranscriptTurn>(STREAMS.turns, route((ev, log) => handlers.turn(ev, log))),
   ];
   return () => {
     for (const stop of stops) stop();

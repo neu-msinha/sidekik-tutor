@@ -56,7 +56,7 @@ pnpm dev            # tsx watch, reads .env
 | `pnpm build` / `pnpm start` | Compile to `dist/` / run the compiled server |
 | `pnpm typecheck` | `tsc --noEmit` |
 | `pnpm test` | vitest |
-| `pnpm dev:mock` | Run against Redis only: in-memory store seeded with the published demo Work Map, no Supabase, teammates' services stubbed |
+| `pnpm dev:mock` | Run against Redis only: in-memory store seeded with the published demo Work Map, no Supabase, brain stubbed (`src/dev/brain.ts`) |
 | `pnpm dev:replay <file.jsonl>` | Publish fixture events onto the bus (`--speed`, `--session`) |
 
 ### Running without teammates' services
@@ -80,6 +80,8 @@ Runtime (`src/tutor/`): a tutor session's state is created on its lifecycle `sta
 Rules (`src/guardrails/rules.ts`): each cached Work Map's guardrails are compiled once. A rule must be a single-operator JSON-Logic expression over the normalized `InvoiceState` variables that evaluates on test records; one that doesn't is logged and never applied. Evaluation is deterministic, with no model calls. A guardrail **blocks** the save when its consequence requires a field value (G1: cost center 0400) or blocks outright (G2). A guardrail whose consequence is only an action (G3 ask the controller, G4 hold, G5 second approval) is **reported** but doesn't block, since editing the record can't satisfy it; in the DESIGN §4 demo, G3 still fires on the final save, which must be allowed. Violations come back blocking first, then in step order. `test/rules.test.ts` runs the §4 demo case and G1–G5 against the seed map.
 
 Step tracker (`src/tutor/step-tracker.ts`), DESIGN §3: each screen event's field (`state.focused_field`, or the `field` of a change, typing or click) is matched against the steps' `screen_signature` (app, record kind, field). A newly opened record resets to the first step; focusing the field of a later step moves forward to it; an earlier step's field doesn't move back, but that step still counts as reached on this case (invoice), which mastery uses. A save click is the save step (S7), and a blocked save puts the learner back on the step that teaches the blocking guardrail.
+
+Predict loop (`src/tutor/predict.ts`), DESIGN §3: when the learner reaches a judgment-call step (S2, S4 in the demo) that hasn't been predicted in this session, the tutor waits for a quiet moment (nobody talking, and the learner silent for 1.5 s; it gives up after 30 s or when the learner moves past the step) and publishes `predict`, e.g. "€7,200 equipment from Antriebstechnik Nord: code the invoice to a cost center. What would Sabine do here, and why?". The learner's next turn is graded with brain's D9 (`POST /internal/decide`, 600 ms) and written to the step's `learner_attempts` row (`predicted`, `prediction_grade`, and D9's confidence in `actual_action.prediction_confidence`, since SCHEMA has no column for it). No answer within 60 s is `no_answer`; if brain is down the prediction is kept ungraded. A step the tutor already intervened on for this record isn't asked. On `wrong` or `partially` the agent explains with the step's reason, which is already in its Procedure.
 
 Pre-save check (`src/tutor/presave.ts`), DESIGN §3: `POST /internal/presave {session_id, state}` (gateway, `X-Internal-Token`, 250 ms budget) re-evaluates every rule on the submitted record, which replaces the tracked one (a new `invoice_id` is a new record). The check is synchronous and model-free (p99 well under 50 ms in `test/presave.test.ts`); commands and rows are written afterwards, in order, in the session's queue.
 

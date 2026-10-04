@@ -136,7 +136,7 @@ export function resolveCleared(deps: EffectDeps, session: TutorSession, violatio
     session.log.info({ guardrail_id: entry.guardrailId, step_id: entry.stepId }, 'violation corrected');
     session.enqueue('resolve intervention', async () => {
       if (entry.rowId) await deps.store.resolveIntervention(entry.rowId);
-      if (attempt) await saveAttempt(deps.store, session, attempt, 'corrected_after_intervention');
+      if (attempt) await saveAttempt(deps.store, session, attempt);
     });
   }
 }

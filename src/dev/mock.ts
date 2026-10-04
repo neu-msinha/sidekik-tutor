@@ -1,13 +1,14 @@
 // `pnpm dev:mock`: the tutor against real Redis with no teammates' services and no Supabase.
 // The store is in memory, seeded with the published demo Work Map and Lena's tutor session
 // (dev/fixtures/seed.json), plus a stand-in clip for S4 (signed URLs point at storage.example).
-// Drive it with `pnpm dev:replay dev/fixtures/tutor_lena.jsonl`, and try the pre-save check with
+// Brain is a stand-in (src/dev/brain.ts). Drive it with `pnpm dev:replay dev/fixtures/tutor_lena.jsonl`, and try the pre-save check with
 // `curl -X POST localhost:8084/internal/presave -H 'x-internal-token: …' -H 'content-type: application/json'
 //   -d '{"session_id":"fixture-tutor-lena","state":{…}}'`.
 import { buildApp } from '../app.js';
 import { createBus } from '../contracts/index.js';
 import { loadEnv } from '../env.js';
 import { memoryStore } from '../store/memory.js';
+import { devBrain } from './brain.js';
 import { DEMO_STEPS, demoSeed } from './fixtures.js';
 
 const DEV_SECRET = 'dev-mock-secret-not-for-production-0000000000';
@@ -37,6 +38,7 @@ app = await buildApp({
   env,
   bus,
   store,
+  decider: devBrain,
   healthChecks: {
     redis: async () => {
       await bus.redis.ping();

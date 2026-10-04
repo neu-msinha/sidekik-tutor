@@ -1,4 +1,5 @@
 import { buildApp } from './app.js';
+import { httpDecider } from './clients/brain.js';
 import { createBus } from './contracts/index.js';
 import { loadEnv } from './env.js';
 import { supabaseStore } from './store/supabase.js';
@@ -18,6 +19,7 @@ app = await buildApp({
   env,
   bus,
   store: supabaseStore(supabase),
+  decider: httpDecider(env.BRAIN_URL, env.SK_INTERNAL_TOKEN),
   healthChecks: {
     supabase: supabaseHealth(supabase),
     redis: async () => {
