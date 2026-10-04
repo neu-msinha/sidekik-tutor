@@ -15,6 +15,7 @@ import type { Store } from '../store/types.js';
 import type { WorkMapCache } from '../workmaps/cache.js';
 import { ClipLinks } from './clips.js';
 import type { EffectDeps } from './interventions.js';
+import { LivePolicy } from './live.js';
 import { PredictLoop } from './predict.js';
 import { presave, type PresaveResult } from './presave.js';
 import type { TutorSession } from './session.js';
@@ -25,7 +26,7 @@ export type TutorDeps = {
   store: Store;
   bus: Bus;
   cache: WorkMapCache;
-  /** Brain `/internal/decide` (D9). */
+  /** Brain `/internal/decide` (D9, D10, D11). */
   decider: Decider;
   log: FastifyBaseLogger;
 };
@@ -36,12 +37,14 @@ export class Tutor implements Handlers {
   readonly clips: ClipLinks;
   private readonly effects: EffectDeps;
   private readonly predict: PredictLoop;
+  private readonly live: LivePolicy;
 
   constructor(private readonly deps: TutorDeps) {
     this.sessions = new TutorSessions(deps.store, deps.cache, deps.log.child({ component: 'tutor' }));
     this.clips = new ClipLinks(deps.store);
     this.effects = { bus: deps.bus, store: deps.store, clips: this.clips };
     this.predict = new PredictLoop({ bus: deps.bus, store: deps.store, decider: deps.decider });
+    this.live = new LivePolicy({ ...this.effects, decider: deps.decider });
   }
 
   /**
@@ -98,6 +101,8 @@ export class Tutor implements Handlers {
     const opened = session.applyScreen(ev.data);
     if (opened) session.log.info({ record: session.record }, 'record opened');
     this.track(session, ev.data, opened);
+    // DESIGN §3: guardrails are evaluated on every field change (dom or vision).
+    if (ev.data.type === 'field_changed') await this.live.onFieldChanged(session, ev.data);
   }
 
   /** Step tracker: moves the current step and counts touched steps as reached. */
@@ -109,7 +114,8 @@ export class Tutor implements Handlers {
     if (current && moved) {
       session.enterStep(current);
       session.log.info({ step_id: current.id, step_key: current.key, from: from?.key }, 'step reached');
-      this.predict.onStep(session, current);
+      // Reached by changing its field, the learner has already decided: nothing left to predict.
+      if (ev.type !== 'field_changed') this.predict.onStep(session, current);
     }
   }
 

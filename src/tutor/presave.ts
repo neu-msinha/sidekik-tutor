@@ -51,7 +51,7 @@ export function presave(deps: EffectDeps, session: TutorSession, state: InvoiceS
       ...(v.step && { step_id: v.step.id }),
     }),
   );
-  const unmentioned = (id: string) => !session.intervened.has(id) || session.intervened.get(id)!.resolved;
+  const unmentioned = (id: string) => !session.spokenAbout(id);
   const main = violations.find((v) => v.blocking);
 
   let result: PresaveResult;
@@ -60,6 +60,7 @@ export function presave(deps: EffectDeps, session: TutorSession, state: InvoiceS
     if (main.step) session.enterStep(main.step);
     const also = violations.filter((v) => v !== main && unmentioned(v.guardrail.id));
     intervene(deps, session, main, { tone: 'presave', trigger: 'presave', also, replay: true });
+    for (const v of [main, ...also]) session.violationsPending.delete(v.guardrail.id);
     result = {
       allow: false,
       guardrail_id: main.guardrail.id,
@@ -70,7 +71,10 @@ export function presave(deps: EffectDeps, session: TutorSession, state: InvoiceS
     };
   } else {
     const [notice, ...rest] = violations.filter((v) => unmentioned(v.guardrail.id));
-    if (notice) intervene(deps, session, notice, { tone: 'presave_notice', trigger: 'presave', also: rest, replay: false });
+    if (notice) {
+      intervene(deps, session, notice, { tone: 'presave_notice', trigger: 'presave', also: rest, replay: false });
+      for (const v of [notice, ...rest]) session.violationsPending.delete(v.guardrail.id);
+    }
     result = { allow: true, violations: report };
   }
   return { ...result, compute_ms: performance.now() - started };

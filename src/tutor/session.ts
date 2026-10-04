@@ -68,6 +68,10 @@ export class TutorSession {
   speech: SpeechState = { userSpeaking: false, lastUserSpeechAt: null, agentSpeaking: false };
   /** Guardrails the tutor spoke about on the open record, by guardrail id. */
   intervened = new Map<string, Intervened>();
+  /** Violations on the open record the tutor hasn't spoken about yet (D11 said wait), by guardrail id. */
+  violationsPending = new Map<string, { since: number; field: string | undefined }>();
+  /** Judgment-call steps on the open record already checked with D10. */
+  divergenceChecked = new Set<string>();
   /** Judgment-call steps the learner has been asked to predict (once per session). */
   readonly predictionsAsked = new Set<string>();
   prediction: PendingPrediction | null = null;
@@ -143,6 +147,12 @@ export class TutorSession {
     this.invoiceState = { ...state };
   }
 
+  /** The tutor spoke about the guardrail on this record and it hasn't been corrected since. */
+  spokenAbout(guardrailId: string): boolean {
+    const entry = this.intervened.get(guardrailId);
+    return entry !== undefined && !entry.resolved;
+  }
+
   /** Makes the step current and counts it as reached on the open record. */
   enterStep(step: Step): void {
     this.currentStep = step;
@@ -153,6 +163,8 @@ export class TutorSession {
     this.record = ref;
     this.invoiceState = {};
     this.intervened = new Map();
+    this.violationsPending = new Map();
+    this.divergenceChecked = new Set();
     this.currentStep = undefined;
   }
 

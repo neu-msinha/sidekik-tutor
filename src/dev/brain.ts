@@ -25,10 +25,17 @@ export function devD9(state: D9State): { answer: string; confidence: number } {
   return { answer: why ? 'correct_with_reason' : 'correct_no_reason', confidence: 0.75 };
 }
 
+/** D11: interrupt for a guardrail that blocks the save, a soft hint for the rest. */
+export function devD11(state: { guardrail: { blocking: boolean } }): string {
+  return state.guardrail.blocking ? 'intervene_now' : 'hint_soft';
+}
+
 export const devBrain: Decider = stubDecider((id, state) => {
   if (id === 'D9') {
     const { answer, confidence } = devD9(state as D9State);
     return decided(id, answer, confidence);
   }
+  if (id === 'D11') return decided(id, devD11(state as { guardrail: { blocking: boolean } }), 0.8);
+  // D10: the stand-in can't tell, so no divergence hints.
   return decided(id, 'cannot_tell', 0);
 });
