@@ -33,8 +33,8 @@ export type PresaveResult = {
  *   and always publishes `intervene` (D11 is skipped) and, the first time, `replay`;
  * - otherwise the save is allowed, and guardrails that fired but don't block (G3) are mentioned once
  *   per record as a soft notice.
- * Guardrails the tutor spoke about that no longer fire count as corrected. The answer doesn't wait
- * for any of the commands or writes.
+ * A blocked save puts the learner back on the guardrail's step. Guardrails the tutor spoke about
+ * that no longer fire count as corrected. The answer doesn't wait for any of the commands or writes.
  */
 export function presave(deps: EffectDeps, session: TutorSession, state: InvoiceState): PresaveResult & { compute_ms: number } {
   const started = performance.now();
@@ -56,6 +56,8 @@ export function presave(deps: EffectDeps, session: TutorSession, state: InvoiceS
 
   let result: PresaveResult;
   if (main) {
+    // The learner goes back to the step that teaches the guardrail.
+    if (main.step) session.enterStep(main.step);
     const also = violations.filter((v) => v !== main && unmentioned(v.guardrail.id));
     intervene(deps, session, main, { tone: 'presave', trigger: 'presave', also, replay: true });
     result = {
