@@ -15,6 +15,12 @@ export const DEMO = {
   session: 'fixture-tutor-lena',
 };
 
+/** Step ids of the demo Work Map. */
+export const DEMO_STEPS = {
+  S4: '00000000-0000-4000-8000-000000000104',
+  S5: '00000000-0000-4000-8000-000000000105',
+};
+
 /** The published demo Work Map, Sabine and Lena's tutor session (dev/fixtures/seed.json). */
 export function demoSeed(): Partial<MemoryData> {
   const { _comment, ...data } = JSON.parse(readFileSync(fixture('seed.json'), 'utf8')) as Partial<MemoryData> & {
