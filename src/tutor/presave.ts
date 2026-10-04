@@ -1,7 +1,7 @@
 import { performance } from 'node:perf_hooks';
 import type { InvoiceState } from '../contracts/index.js';
 import { evaluate } from '../guardrails/rules.js';
-import { intervene, resolveCleared, type EffectDeps } from './interventions.js';
+import { fieldOf, intervene, resolveCleared, type EffectDeps } from './interventions.js';
 import type { TutorSession } from './session.js';
 import { quoteFor } from './words.js';
 
@@ -14,7 +14,8 @@ export type PresaveViolation = {
 };
 
 /**
- * `POST /internal/presave` answer. The first four fields are the gateway's contract; `violations`
+ * `POST /internal/presave` answer (`PresaveResponse` in the contracts). `field` is the one the MiniERP
+ * highlights, so it doesn't wait for the `intervene` command; `violations`
  * lists every guardrail that fired (blocking first), so non-blocking ones such as G3 are reported.
  */
 export type PresaveResult = {
@@ -23,6 +24,7 @@ export type PresaveResult = {
   guardrail_key?: string;
   quote?: string;
   step_id?: string;
+  field?: string;
   violations: PresaveViolation[];
 };
 
@@ -30,7 +32,7 @@ export type PresaveResult = {
  * The pre-save check (DESIGN §3), deterministic and model-free. Every rule is re-evaluated on the
  * submitted record:
  * - a blocking violation answers `allow:false` with the guardrail, the expert's words and the step,
- *   and always publishes `intervene` (D11 is skipped) and, the first time, `replay`;
+ *   and the field to highlight, and always publishes `intervene` (D11 is skipped) and, the first time, `replay`;
  * - otherwise the save is allowed, and guardrails that fired but don't block (G3) are mentioned once
  *   per record as a soft notice.
  * A blocked save puts the learner back on the guardrail's step. Guardrails the tutor spoke about
@@ -58,6 +60,7 @@ export function presave(deps: EffectDeps, session: TutorSession, state: InvoiceS
   if (main) {
     // The learner goes back to the step that teaches the guardrail.
     if (main.step) session.enterStep(main.step);
+    const field = fieldOf(main);
     const also = violations.filter((v) => v !== main && unmentioned(v.guardrail.id));
     intervene(deps, session, main, { tone: 'presave', trigger: 'presave', also, replay: true });
     for (const v of [main, ...also]) session.violationsPending.delete(v.guardrail.id);
@@ -67,6 +70,7 @@ export function presave(deps: EffectDeps, session: TutorSession, state: InvoiceS
       guardrail_key: main.guardrail.key,
       quote: quoteFor(session.map, session.language, main.guardrail),
       ...(main.step && { step_id: main.step.id }),
+      ...(field && { field }),
       violations: report,
     };
   } else {

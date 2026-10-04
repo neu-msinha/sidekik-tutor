@@ -9,7 +9,7 @@ The tutor runtime for **Sidekik**, an AI apprentice ([sidekik.live](https://side
 - **Step tracking:** matches `(app, record_kind, focused_field)` from screen events against each step's `screen_signature`; a new record resets to the first step.
 - **Predict loop:** at a judgment-call step, waits for 1.5 s of learner silence, publishes `predict` ("which cost center would Sabine use, and why?") and grades the answer with brain's D9.
 - **Rule engine:** evaluates every compiled guardrail with `json-logic-js` against the normalized `InvoiceState` on each `field_changed`. D11 picks `hint_soft`, `intervene_now` or `wait_and_watch`; D10 allows only soft hints for divergences no guardrail covers.
-- **Pre-save check:** `POST /internal/presave` re-evaluates every rule in under 50 ms of compute, with no model calls. A violation returns `allow:false` with the guardrail, the expert's quote and the step, and always publishes `intervene` then `replay`.
+- **Pre-save check:** `POST /internal/presave` re-evaluates every rule in under 50 ms of compute, with no model calls. A violation returns `allow:false` with the guardrail, the expert's quote, the step and the `field` to highlight, and always publishes `intervene` then `replay`.
 - **Mastery and gaps:** on `ended`, scores each step (`independent_correct` > `prompted_correct` > `corrected_after_intervention` > `not_attempted`) and publishes `summary`. Repeated trips across learners become `gap_flags`, which mapper turns into open items for the expert's next debrief. Experts see only aggregate gaps.
 - **MCP:** `https://mcp.sidekik.live/mcp` (streamable HTTP, bearer `SK_TOOL_SECRET`) exposes the tool endpoints plus `export_agent_rules(workmap_id)`.
 
