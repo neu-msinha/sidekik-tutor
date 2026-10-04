@@ -12,6 +12,10 @@ export type EffectDeps = { bus: Bus; store: Store; clips: ClipLinks };
 
 type Trigger = InterventionRow['trigger'];
 
+/** The `InvoiceState` field the page highlights: the one the guardrail requires, else the step's field. */
+export const fieldOf = (rule: CompiledRule): string | undefined =>
+  Object.keys(rule.guardrail.consequence.require ?? {})[0] ?? rule.step?.screen_signature.field;
+
 const styleOf = (tone: InterventionTone): InterventionRow['style'] =>
   tone === 'hint_soft' || tone === 'presave_notice' ? 'hint_soft' : 'intervene_now';
 
@@ -37,7 +41,7 @@ export function intervene(
   const replay = opts.replay && !entry.replayed && main.step !== undefined;
   if (replay) entry.replayed = true;
   const text = interventionText(session.map, session.language, opts.tone, main, opts.also);
-  const field = Object.keys(main.guardrail.consequence.require ?? {})[0] ?? main.step?.screen_signature.field;
+  const field = fieldOf(main);
   session.log.info(
     { guardrail_id: main.guardrail.id, guardrail_key: main.guardrail.key, trigger: opts.trigger, style, replay },
     'intervening',

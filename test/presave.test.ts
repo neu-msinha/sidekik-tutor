@@ -53,6 +53,7 @@ describe('DESIGN §4 demo case: the save is caught before it goes through', () =
       guardrail_key: 'G1',
       quote: 'Anything over five thousand net for equipment is a fixed asset, so 0400.',
       step_id: STEP(4),
+      field: 'cost_center',
       violations: [
         { guardrail_id: GUARDRAIL(1), key: 'G1', description: expect.any(String), blocking: true, step_id: STEP(4) },
         { guardrail_id: GUARDRAIL(3), key: 'G3', description: 'Unknown supplier: stop and ask the controller.', blocking: false, step_id: STEP(1) },
@@ -77,7 +78,7 @@ describe('DESIGN §4 demo case: the save is caught before it goes through', () =
 
     // 2. Switched to 0400 without an asset number: G2 blocks; G1 counts as corrected.
     const second = await save({ ...INVOICE_4510, cost_center: '0400' });
-    expect(second.json()).toMatchObject({ allow: false, guardrail_key: 'G2', step_id: STEP(5) });
+    expect(second.json()).toMatchObject({ allow: false, guardrail_key: 'G2', step_id: STEP(5), field: 'asset_number' });
     expect(bus.commands().slice(2)).toEqual([expect.objectContaining({ type: 'intervene', guardrail_id: GUARDRAIL(2) })]);
     expect(bus.commands()[2]).toHaveProperty('text', expect.not.stringContaining('Also:'));
     expect(store.data.interventions.find((r) => r.guardrail_id === GUARDRAIL(1))?.resolved).toBe(true);
