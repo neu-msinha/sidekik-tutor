@@ -24,7 +24,7 @@ Tutor turns a published Work Map into live coaching on the learner's own screen.
 | Consumes `sk:screen.events` | For tutor sessions: updates `invoiceState`, runs the step tracker, evaluates the rules. |
 | Consumes `sk:transcript.turns` | Learner answers to predictions (graded with D9). |
 | Consumes `sk:speech.signals` | Avoids talking over the learner. |
-| `POST /internal/presave` | `{session_id, state}` → `{allow, guardrail_id?, quote?, step_id?}` in **under 50 ms of compute**. No model calls on this path. |
+| `POST /internal/presave` | `{session_id, state}` → `{allow, guardrail_id?, guardrail_key?, quote?, step_id?, field?, violations?}` in **under 50 ms of compute**. No model calls on this path. |
 | `POST /internal/tools/check_guardrails` | `{session_id, state?}` → violations and guardrail descriptions |
 | `POST /internal/tools/get_step` | `{session_id, step_id?}` → the current or requested step, in the expert's words |
 | `POST /internal/tools/get_expert_moment` | `{step_id}` → `{quote, quote_en?, label, clip_url?}` (signed, 10 min). 404 when the expert gave no reason for the step; `clip_url` is omitted until perception has cut the clip. |
@@ -97,7 +97,7 @@ state: { workmap, currentStepId, invoiceState, violationsPending: Map<guardrailI
 1. Seed: Work Map with G1 and G2 published.
 2. The learner opens invoice "€7,200 spindle motor, new supplier", sets cost_center 4711, and presses Save.
 3. **Expected:**
-   - presave returns `{allow:false, guardrail_id:"G1", quote:"Equipment over €5,000 is always capex."}`;
+   - presave returns `{allow:false, guardrail_id:"G1", quote:"Equipment over €5,000 is always capex.", field:"cost_center"}`;
    - an `intervene` command is published, followed by `replay` with the 03:12 clip;
    - G3 (unknown supplier → ask the controller) is also reported.
 4. The learner switches to 0400 without an asset number and presses Save → G2 blocks it.
