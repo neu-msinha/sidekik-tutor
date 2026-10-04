@@ -14,7 +14,9 @@ import type { WorkMapCache } from '../workmaps/cache.js';
 import { ClipLinks } from './clips.js';
 import type { EffectDeps } from './interventions.js';
 import { presave, type PresaveResult } from './presave.js';
+import type { TutorSession } from './session.js';
 import { TutorSessions } from './sessions.js';
+import { trackStep } from './step-tracker.js';
 
 export type TutorDeps = {
   store: Store;
@@ -85,7 +87,21 @@ export class Tutor implements Handlers {
     const session = await this.sessions.resolve(ev.session_id, log);
     if (!session) return;
     session.seen(ev.t_ms);
-    if (session.applyScreen(ev.data)) session.log.info({ record: session.record }, 'record opened');
+    const opened = session.applyScreen(ev.data);
+    if (opened) session.log.info({ record: session.record }, 'record opened');
+    this.track(session, ev.data, opened);
+  }
+
+  /** Step tracker: moves the current step and counts touched steps as reached. */
+  private track(session: TutorSession, ev: ScreenEvent, opened: boolean): void {
+    const screen = { app: session.app, recordKind: session.record?.kind };
+    const from = session.currentStep;
+    const { current, moved, touched } = trackStep(session.map.steps, from, screen, ev, opened);
+    for (const step of touched) session.attempt(step.id).reached = true;
+    if (current && moved) {
+      session.enterStep(current);
+      session.log.info({ step_id: current.id, step_key: current.key, from: from?.key }, 'step reached');
+    }
   }
 
   async speech(ev: Envelope<SpeechSignal>, log: FastifyBaseLogger): Promise<void> {

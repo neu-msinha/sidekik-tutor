@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyBaseLogger } from 'fastify';
-import type { InvoiceState, ScreenEvent } from '../contracts/index.js';
+import type { InvoiceState, ScreenEvent, Step } from '../contracts/index.js';
 import type { TeachingMap } from '../workmaps/cache.js';
 
 export type RecordRef = { kind: string; id: string };
@@ -20,6 +20,8 @@ export type Attempt = {
   id: string;
   stepId: string;
   caseRef: string | null;
+  /** The learner got to the step on this case (its field, or it was current). */
+  reached: boolean;
   /** The row has been written at least once. */
   saved: boolean;
   predicted: string | null;
@@ -48,6 +50,8 @@ export class TutorSession {
   app: string | undefined;
   /** The open record, normalized; guardrails are evaluated against it. */
   invoiceState: InvoiceState = {};
+  /** The step the learner is on (step tracker). */
+  currentStep: Step | undefined;
   /** Latest session-timeline time seen on the bus, for the commands tutor publishes. */
   lastTms = 0;
   speech: SpeechState = { userSpeaking: false, lastUserSpeechAt: null, agentSpeaking: false };
@@ -102,6 +106,7 @@ export class TutorSession {
         id: randomUUID(),
         stepId,
         caseRef,
+        reached: false,
         saved: false,
         predicted: null,
         grade: null,
@@ -125,10 +130,17 @@ export class TutorSession {
     this.invoiceState = { ...state };
   }
 
+  /** Makes the step current and counts it as reached on the open record. */
+  enterStep(step: Step): void {
+    this.currentStep = step;
+    this.attempt(step.id).reached = true;
+  }
+
   private openRecord(ref: RecordRef): void {
     this.record = ref;
     this.invoiceState = {};
     this.intervened = new Map();
+    this.currentStep = undefined;
   }
 
   /**

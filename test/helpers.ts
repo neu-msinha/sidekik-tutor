@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { pino } from 'pino';
 import type { FastifyBaseLogger } from 'fastify';
 import { buildApp, type AppDeps } from '../src/app.js';
@@ -171,4 +172,20 @@ export function tutorHarness(overrides: Partial<TutorDeps> = {}) {
     return tutor.sessions.get(sessionId)!;
   };
   return { bus, store, cache, tutor, stop, start };
+}
+
+/**
+ * Delivers dev/fixtures/tutor_lena.jsonl to the streams the bus consumes (others, such as DOM
+ * events, are skipped), in t_ms order, up to and including `untilTms`.
+ */
+export async function replayLena(bus: ReturnType<typeof fakeBus>, untilTms = Number.POSITIVE_INFINITY) {
+  const lines = readFileSync(new URL('../dev/fixtures/tutor_lena.jsonl', import.meta.url), 'utf8')
+    .split('\n')
+    .filter((l) => l.trim())
+    .map((l) => JSON.parse(l) as { stream: StreamKey; ev: Envelope<unknown> })
+    .sort((a, b) => a.ev.t_ms - b.ev.t_ms);
+  for (const { stream, ev } of lines) {
+    if (ev.t_ms > untilTms) break;
+    if (bus.consuming(stream)) await bus.deliver(stream, ev);
+  }
 }
