@@ -39,8 +39,12 @@ export type Attempt = {
   grade: string | null;
   /** D9's confidence in the grade. */
   confidence: number | null;
+  /** A blocking guardrail of the step stopped the learner. */
   intervened: boolean;
+  /** …and the learner fixed it. */
   corrected: boolean;
+  /** The learner got a soft hint or notice on the step (a non-blocking guardrail, a divergence). */
+  hinted: boolean;
 };
 
 /** The learner's voice activity, from `sk:speech.signals`. */
@@ -72,6 +76,8 @@ export class TutorSession {
   violationsPending = new Map<string, { since: number; field: string | undefined }>();
   /** Judgment-call steps on the open record already checked with D10. */
   divergenceChecked = new Set<string>();
+  /** Guardrails that fired at least once in the session (live or at a save). */
+  readonly guardrailsSeen = new Set<string>();
   /** Judgment-call steps the learner has been asked to predict (once per session). */
   readonly predictionsAsked = new Set<string>();
   prediction: PendingPrediction | null = null;
@@ -130,6 +136,7 @@ export class TutorSession {
         confidence: null,
         intervened: false,
         corrected: false,
+        hinted: false,
       };
       this.attempts.set(key, attempt);
     }

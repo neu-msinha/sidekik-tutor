@@ -103,8 +103,12 @@ function remember(
   session.intervened.set(guardrail.id, entry);
   if (step) {
     const attempt = session.attempt(step.id);
-    attempt.intervened = true;
-    attempt.corrected = false;
+    if (rule.blocking) {
+      attempt.intervened = true;
+      attempt.corrected = false;
+    } else {
+      attempt.hinted = true;
+    }
   }
   return entry.rowId && session.learnerId
     ? {
@@ -128,6 +132,7 @@ function remember(
  */
 export function resolveCleared(deps: EffectDeps, session: TutorSession, violations: Violation[]): void {
   const firing = new Set(violations.map((v) => v.guardrail.id));
+  for (const id of firing) session.guardrailsSeen.add(id);
   for (const entry of session.intervened.values()) {
     if (entry.resolved || firing.has(entry.guardrailId)) continue;
     entry.resolved = true;

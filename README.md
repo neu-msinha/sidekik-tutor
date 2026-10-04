@@ -98,6 +98,14 @@ Pre-save check (`src/tutor/presave.ts`), DESIGN §3: `POST /internal/presave {se
 - Every guardrail spoken about gets an `interventions` row (`trigger: presave`). One that no longer fires is corrected: its row is marked `resolved` and the step's `learner_attempts` row gets `corrected_after_intervention`.
 - Capture sessions and sessions that aren't live tutor sessions are always allowed. Without a learner (fixtures) nothing is written, but the check still blocks and speaks.
 
+Mastery (`src/tutor/mastery.ts`), DESIGN §3: on a tutor session's `ended`, each step gets an outcome per case (invoice) the learner attempted it on:
+
+- a blocking guardrail stopped the learner: `corrected_after_intervention` once fixed (never fixed counts as `not_attempted`: the step wasn't done);
+- a soft hint or notice, or a prediction that missed (`wrong`, `partially`, `no_answer`): `prompted_correct`;
+- otherwise, if the learner got to the step: `independent_correct`.
+
+A step's outcome is its weakest over the cases, `not_attempted` without any. Practice next: steps that needed an intervention, then guardrails that never came up. Every attempt's final outcome goes to `learner_attempts`, the summary to a `mastery` row, and `summary` is published so the agent reads it aloud and the page shows the mastery panel. In the §4 demo, S4 ends as `corrected_after_intervention`.
+
 Agent tools (`src/tutor/tools.ts`), DESIGN §2. Read-only: they never publish commands or write rows.
 
 | Tool | Route (gateway proxies, `X-Internal-Token`) | Answer |

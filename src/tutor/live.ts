@@ -114,6 +114,7 @@ export class LivePolicy {
   }
 
   private hintDivergence(session: TutorSession, step: Step): void {
+    session.attempt(step.id).hinted = true;
     // `intervene` names a guardrail; a divergence cites the step's first one.
     const guardrailId = step.guardrail_ids[0];
     const reason = step.reason ? ` ${session.map.expertName} said: "${quoteFor(session.map, session.language, step.reason)}"` : '';

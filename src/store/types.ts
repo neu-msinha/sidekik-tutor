@@ -1,4 +1,4 @@
-import type { WorkMap, WorkMapStatus } from '../contracts/index.js';
+import type { MasterySummary, WorkMap, WorkMapStatus } from '../contracts/index.js';
 
 // Rows as SCHEMA.md defines them; only the columns the tutor reads or writes.
 
@@ -59,6 +59,16 @@ export type AttemptRow = {
   outcome: Outcome | null;
 };
 
+/** tutor's `mastery`: one per finished tutor session. */
+export type MasteryRow = {
+  id: string;
+  org_id: string;
+  session_id: string;
+  learner_id: string;
+  work_map_id: string;
+  summary: MasterySummary;
+};
+
 export interface Store {
   getSession(id: string): Promise<SessionRow | null>;
   getExpert(id: string): Promise<ExpertRow | null>;
@@ -74,4 +84,5 @@ export interface Store {
   resolveIntervention(id: string): Promise<void>;
   /** Inserts the attempt or replaces it by id. */
   upsertAttempt(row: AttemptRow): Promise<void>;
+  insertMastery(row: MasteryRow): Promise<void>;
 }
