@@ -106,6 +106,8 @@ Mastery (`src/tutor/mastery.ts`), DESIGN §3: on a tutor session's `ended`, each
 
 A step's outcome is its weakest over the cases, `not_attempted` without any. Practice next: steps that needed an intervention, then guardrails that never came up. Every attempt's final outcome goes to `learner_attempts`, the summary to a `mastery` row, and `summary` is published so the agent reads it aloud and the page shows the mastery panel. In the §4 demo, S4 ends as `corrected_after_intervention`.
 
+Gap flags (`src/tutor/gap-flags.ts`), DESIGN §3: after mastery, a blocking guardrail this learner tripped, or a step whose prediction D9 graded below 0.55 confidence, becomes a `gap_flags` row (`guardrail_tripped` or `prediction_unsure`) once at least two distinct learners share it, counted from the tutor's own `interventions` and `learner_attempts` across sessions. Later learners are added to the flag, and a resolved flag reopens when a new learner trips it. Guardrails that only report (G3–G5) aren't learner mistakes and aren't flagged. Mapper turns open flags into `learner_gap` open items for the expert's next debrief; experts see the aggregate, never who the learners were (logs carry counts only).
+
 Agent tools (`src/tutor/tools.ts`), DESIGN §2. Read-only: they never publish commands or write rows.
 
 | Tool | Route (gateway proxies, `X-Internal-Token`) | Answer |

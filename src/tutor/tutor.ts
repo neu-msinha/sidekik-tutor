@@ -16,6 +16,7 @@ import type { WorkMapCache } from '../workmaps/cache.js';
 import { ClipLinks } from './clips.js';
 import type { EffectDeps } from './interventions.js';
 import { LivePolicy } from './live.js';
+import { updateGapFlags } from './gap-flags.js';
 import { finishSession } from './mastery.js';
 import { PredictLoop } from './predict.js';
 import { presave, type PresaveResult } from './presave.js';
@@ -97,6 +98,9 @@ export class Tutor implements Handlers {
     this.predict.stop(session);
     await session.idle();
     await finishSession(this.effects, session);
+    // After mastery, so this session's rows are counted. A failure must not fail `ended`: a retry
+    // would find the session gone and the flags would be lost either way.
+    await updateGapFlags(this.deps.store, session).catch((err: unknown) => session.log.error({ err }, 'gap flags failed'));
     session.log.info('tutor session ended');
   }
 

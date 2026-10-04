@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { ExpertRow, SessionRow, Store, WorkMapRow } from './types.js';
+import type { ExpertRow, GapFlagRow, SessionRow, Store, WorkMapRow } from './types.js';
 
 type Result<T> = { data: T | null; error: { message: string; code?: string } | null };
 
@@ -76,6 +76,43 @@ export function supabaseStore(db: SupabaseClient): Store {
 
     async insertMastery(row) {
       unwrap(await db.from('mastery').insert(row), 'insert mastery');
+    },
+
+    async learnersIntervenedOn(guardrailId) {
+      const res = await db.from('interventions').select('learner_id').eq('guardrail_id', guardrailId);
+      return [...new Set(unwrap<{ learner_id: string }[]>(res, 'load interventions').map((r) => r.learner_id))];
+    },
+
+    async learnersUnsureOn(stepId, below) {
+      const res = await db
+        .from('learner_attempts')
+        .select('learner_id, actual_action')
+        .eq('step_id', stepId)
+        .not('prediction_grade', 'is', null);
+      const rows = unwrap<{ learner_id: string; actual_action: { prediction_confidence?: unknown } | null }[]>(res, 'load attempts');
+      const unsure = rows.filter((r) => {
+        const confidence = r.actual_action?.prediction_confidence;
+        return typeof confidence === 'number' && confidence < below;
+      });
+      return [...new Set(unsure.map((r) => r.learner_id))];
+    },
+
+    async upsertGapFlag(row) {
+      // Not an upsert: the unique key has nullable columns, and NULLs never conflict in Postgres.
+      let query = db.from('gap_flags').select('id, learner_ids, status').eq('work_map_id', row.work_map_id).eq('kind', row.kind);
+      query = row.step_id === null ? query.is('step_id', null) : query.eq('step_id', row.step_id);
+      query = row.guardrail_id === null ? query.is('guardrail_id', null) : query.eq('guardrail_id', row.guardrail_id);
+      const existing = unwrap<{ id: string; learner_ids: string[]; status: string } | null>(await query.maybeSingle(), 'load gap flag');
+      if (!existing) {
+        unwrap(await db.from('gap_flags').insert(row), 'insert gap flag');
+        return { created: true };
+      }
+      const added = row.learner_ids.filter((id) => !existing.learner_ids.includes(id));
+      if (added.length === 0) return { created: false };
+      const patch: { learner_ids: string[]; status?: string } = { learner_ids: [...existing.learner_ids, ...added] };
+      if (existing.status === 'resolved') patch.status = 'open';
+      unwrap(await db.from('gap_flags').update(patch).eq('id', existing.id), 'update gap flag');
+      return { created: false };
     },
   };
 }
