@@ -20,7 +20,8 @@ export class ClipLinks {
     if (hit && hit.expiresAt - Date.now() > MIN_LEFT_MS) return hit.url;
     const path = await this.store.getStepClipPath(stepId);
     if (!path) return null;
-    const url = await this.store.signStorageUrl('captures', path, CLIP_TTL_S);
+    // Perception stores clips.storage_path with the bucket in front ("captures/org/…").
+    const url = await this.store.signStorageUrl('captures', path.replace(/^captures\//, ''), CLIP_TTL_S);
     this.cached.set(stepId, { url, expiresAt: Date.now() + CLIP_TTL_S * 1000 });
     return url;
   }

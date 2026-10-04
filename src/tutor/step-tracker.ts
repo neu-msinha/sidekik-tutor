@@ -3,10 +3,14 @@ import type { ScreenEvent, Step } from '../contracts/index.js';
 /** Events whose `field` is where the learner is working. */
 const FIELD_EVENTS = new Set<ScreenEvent['type']>(['field_changed', 'typing_in_progress', 'button_clicked']);
 
-/** The field a screen event puts the learner on, if any. */
+/** The field a screen event puts the learner on, if any. A click names its button ("save"), not the focus. */
 export function fieldOf(ev: ScreenEvent): string | undefined {
+  if (ev.type === 'button_clicked' && ev.field) return ev.field;
   return ev.state.focused_field ?? (FIELD_EVENTS.has(ev.type) ? ev.field : undefined);
 }
+
+/** Work Map field names whose MiniERP field is named differently. */
+const FIELD_ALIASES: Record<string, string> = { approvals: 'approvals_count' };
 
 export type Screen = { app: string | undefined; recordKind: string | undefined };
 
@@ -15,7 +19,8 @@ const same = (a: string | undefined, b: string) => a === undefined || a.toLowerC
 /** The step's screen signature matches the app and record kind on screen (and the field, when given). */
 export function onScreen(step: Step, screen: Screen, field?: string): boolean {
   const sig = step.screen_signature;
-  return same(screen.app, sig.app) && same(screen.recordKind, sig.record_kind) && (field === undefined || sig.field === field);
+  const matches = field === undefined || sig.field === field || (sig.field !== undefined && FIELD_ALIASES[sig.field] === field);
+  return same(screen.app, sig.app) && same(screen.recordKind, sig.record_kind) && matches;
 }
 
 export type Tracked = {
