@@ -45,12 +45,35 @@ cp .env.example .env
 # 3. Start the shared dev stack (Redis + Presidio) from a sidekik-platform clone
 docker compose -f ../sidekik-platform/dev/docker-compose.yml up -d
 
-# 4. Install and run (once ticket 1 lands)
+# 4. Install and run
 pnpm install
 pnpm dev            # tsx watch, reads .env
 ```
 
-Until mapper publishes, use the pre-confirmed seed Work Map, and stub brain `/internal/decide`.
+| Script | What it does |
+|---|---|
+| `pnpm dev` | Run from source with reload (reads `.env`) |
+| `pnpm build` / `pnpm start` | Compile to `dist/` / run the compiled server |
+| `pnpm typecheck` | `tsc --noEmit` |
+| `pnpm test` | vitest |
+| `pnpm dev:mock` | Run against Redis only: in-memory store seeded with the published demo Work Map, no Supabase, teammates' services stubbed |
+| `pnpm dev:replay <file.jsonl>` | Publish fixture events onto the bus (`--speed`, `--session`) |
+
+### Running without teammates' services
+
+```bash
+docker compose -f ../sidekik-platform/dev/docker-compose.yml up -d   # Redis
+pnpm dev:mock                                                         # prints the dev internal token
+pnpm dev:replay dev/fixtures/tutor_lena.jsonl --speed 5               # Lena's tutor session
+```
+
+`dev/fixtures/seed.json` is generated from sidekik-platform `dev/seed/demo.ts`: the published demo Work Map (S1–S7, G1–G5), Sabine, and Lena's tutor session `fixture-tutor-lena`. `dev/fixtures/tutor_lena.jsonl` is sidekik-platform's tutor fixture: Lena opens invoice 4510 (€7,200 spindle motor, unknown supplier, on 4711), saves, recodes it to 0400, then puts Kranbau's December invoice 4511 on hold.
+
+The service checks every env var at boot and exits with a list of the ones that are missing. `GET /healthz` returns `{ok, version, deps}`, with 503 when Redis or Supabase is down.
+
+Runtime (`src/tutor/`): a tutor session's state is created on its lifecycle `started` (the learner and Work Map come from its `sessions` row), or on its first event after a restart. Screen events update the open record (`invoiceState`); speech signals track whether the learner is talking. Work Maps are cached in memory (`src/workmaps/cache.ts`): every published map at boot, a map again on `sk:workmap.published`, and any other map a session refers to on first use.
+
+Bus handling: every handler is idempotent on `event.id`, every event of a replay session (`mode:"replay"`) is ignored, and capture sessions are remembered so their screen events cost no database lookup.
 
 | Env var | What it is |
 |---|---|

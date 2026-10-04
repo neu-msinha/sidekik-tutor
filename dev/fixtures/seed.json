@@ -1,0 +1,450 @@
+{
+  "_comment": "Generated from sidekik-platform dev/seed/demo.ts: the published demo Work Map (S1–S7, G1–G5), Sabine, and the tutor session of dev/fixtures/tutor_lena.jsonl. Loaded by pnpm dev:mock and the tests.",
+  "experts": [
+    {
+      "id": "00000000-0000-4000-8000-000000000011",
+      "org_id": "00000000-0000-4000-8000-000000000001",
+      "display_name": "Sabine"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "fixture-tutor-lena",
+      "org_id": "00000000-0000-4000-8000-000000000001",
+      "workflow_id": "00000000-0000-4000-8000-000000000031",
+      "kind": "tutor",
+      "mode": "browser",
+      "learner_id": "00000000-0000-4000-8000-000000000021",
+      "workmap_id": "00000000-0000-4000-8000-000000000041",
+      "language": "en",
+      "ended_at": null
+    }
+  ],
+  "work_maps": [
+    {
+      "id": "00000000-0000-4000-8000-000000000041",
+      "org_id": "00000000-0000-4000-8000-000000000001",
+      "workflow_id": "00000000-0000-4000-8000-000000000031",
+      "expert_id": "00000000-0000-4000-8000-000000000011",
+      "version": 1,
+      "status": "published",
+      "json": {
+        "id": "00000000-0000-4000-8000-000000000041",
+        "workflow_id": "00000000-0000-4000-8000-000000000031",
+        "expert_id": "00000000-0000-4000-8000-000000000011",
+        "version": 1,
+        "status": "published",
+        "title": "Supplier invoice coding",
+        "language": "de",
+        "steps": [
+          {
+            "id": "00000000-0000-4000-8000-000000000101",
+            "key": "S1",
+            "ordinal": 1,
+            "title": "Open the invoice and check the supplier",
+            "screen_moment": {
+              "t_ms": 18000,
+              "label": "00:18",
+              "event_ids": [
+                "seed-se-s1"
+              ],
+              "entity": "invoice 4471",
+              "field": "supplier"
+            },
+            "decision": "Checked that Präzisionswerk Ulm is a known supplier",
+            "reason": {
+              "quote": "Erst schaue ich, ob wir den Lieferanten kennen.",
+              "quote_en": "First I check whether we know the supplier.",
+              "turn_id": "seed-t01",
+              "source_label": "Sabine, 00:18"
+            },
+            "guardrail_ids": [
+              "00000000-0000-4000-8000-000000000203"
+            ],
+            "is_judgment_call": false,
+            "screen_signature": {
+              "app": "MiniERP",
+              "record_kind": "invoice",
+              "field": "supplier"
+            }
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000102",
+            "key": "S2",
+            "ordinal": 2,
+            "title": "Check the invoice date",
+            "screen_moment": {
+              "t_ms": 40000,
+              "label": "00:40",
+              "event_ids": [
+                "seed-se-s2"
+              ],
+              "entity": "invoice 4471",
+              "field": "invoice_date"
+            },
+            "decision": "Checked the invoice month for known December double-billing",
+            "reason": {
+              "quote": "Beim Datum schaue ich, ob es Dezember ist, wegen Kranbau.",
+              "quote_en": "With the date I check whether it's December, because of Kranbau.",
+              "turn_id": "seed-t03",
+              "source_label": "Sabine, 00:40"
+            },
+            "guardrail_ids": [
+              "00000000-0000-4000-8000-000000000204"
+            ],
+            "is_judgment_call": true,
+            "screen_signature": {
+              "app": "MiniERP",
+              "record_kind": "invoice",
+              "field": "invoice_date"
+            }
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000103",
+            "key": "S3",
+            "ordinal": 3,
+            "title": "Check the company code",
+            "screen_moment": {
+              "t_ms": 64000,
+              "label": "01:04",
+              "event_ids": [
+                "seed-se-s3"
+              ],
+              "entity": "invoice 4471",
+              "field": "company_code"
+            },
+            "decision": "Checked whether the invoice belongs to the Czech subsidiary",
+            "reason": {
+              "quote": "DE01 ist bei uns, CZ01 ist die tschechische Tochter.",
+              "quote_en": "DE01 is us, CZ01 is the Czech subsidiary.",
+              "turn_id": "seed-t04",
+              "source_label": "Sabine, 01:04"
+            },
+            "guardrail_ids": [
+              "00000000-0000-4000-8000-000000000205"
+            ],
+            "is_judgment_call": false,
+            "screen_signature": {
+              "app": "MiniERP",
+              "record_kind": "invoice",
+              "field": "company_code"
+            }
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000104",
+            "key": "S4",
+            "ordinal": 4,
+            "title": "Code the invoice to a cost center",
+            "screen_moment": {
+              "t_ms": 192000,
+              "label": "03:12",
+              "event_ids": [
+                "seed-se-s4"
+              ],
+              "entity": "invoice 4471",
+              "field": "cost_center"
+            },
+            "decision": "Re-coded opex (4711) to capex (0400)",
+            "reason": {
+              "quote": "…und dann geht die auf 0400, weil das eine Maschine ist.",
+              "quote_en": "…and then it goes to 0400, because it's a machine.",
+              "turn_id": "seed-t07",
+              "source_label": "Sabine, 03:12"
+            },
+            "guardrail_ids": [
+              "00000000-0000-4000-8000-000000000201"
+            ],
+            "is_judgment_call": true,
+            "screen_signature": {
+              "app": "MiniERP",
+              "record_kind": "invoice",
+              "field": "cost_center"
+            }
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000105",
+            "key": "S5",
+            "ordinal": 5,
+            "title": "Add the asset number",
+            "screen_moment": {
+              "t_ms": 214000,
+              "label": "03:34",
+              "event_ids": [
+                "seed-se-s5"
+              ],
+              "entity": "invoice 4471",
+              "field": "asset_number"
+            },
+            "decision": "Added an asset number for the capex booking",
+            "reason": {
+              "quote": "Für 0400 trage ich die Anlagennummer ein.",
+              "quote_en": "For 0400 I enter the asset number.",
+              "turn_id": "seed-t09",
+              "source_label": "Sabine, 03:34"
+            },
+            "guardrail_ids": [
+              "00000000-0000-4000-8000-000000000202"
+            ],
+            "is_judgment_call": false,
+            "screen_signature": {
+              "app": "MiniERP",
+              "record_kind": "invoice",
+              "field": "asset_number"
+            }
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000106",
+            "key": "S6",
+            "ordinal": 6,
+            "title": "Collect the approvals",
+            "screen_moment": {
+              "t_ms": 236000,
+              "label": "03:56",
+              "event_ids": [
+                "seed-se-s6"
+              ],
+              "entity": "invoice 4471",
+              "field": "approvals"
+            },
+            "decision": "Requested the approvals the invoice needs",
+            "reason": {
+              "quote": "Dann geht die Freigabe raus.",
+              "quote_en": "Then the approval request goes out.",
+              "turn_id": "seed-t10",
+              "source_label": "Sabine, 03:56"
+            },
+            "guardrail_ids": [
+              "00000000-0000-4000-8000-000000000205"
+            ],
+            "is_judgment_call": false,
+            "screen_signature": {
+              "app": "MiniERP",
+              "record_kind": "invoice",
+              "field": "approvals"
+            }
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000107",
+            "key": "S7",
+            "ordinal": 7,
+            "title": "Save the invoice",
+            "screen_moment": {
+              "t_ms": 250000,
+              "label": "04:10",
+              "event_ids": [
+                "seed-se-s7"
+              ],
+              "entity": "invoice 4471",
+              "field": "save"
+            },
+            "decision": "Saved the invoice after every check passed",
+            "reason": {
+              "quote": "Erst wenn alles passt, speichere ich.",
+              "quote_en": "Only when everything checks out do I save.",
+              "turn_id": "seed-t11",
+              "source_label": "Sabine, 04:10"
+            },
+            "guardrail_ids": [],
+            "is_judgment_call": false,
+            "screen_signature": {
+              "app": "MiniERP",
+              "record_kind": "invoice",
+              "field": "save"
+            }
+          }
+        ],
+        "guardrails": [
+          {
+            "id": "00000000-0000-4000-8000-000000000201",
+            "key": "G1",
+            "kind": "threshold",
+            "description": "Equipment over €5,000 net is always capex: cost center 0400.",
+            "rule": {
+              "and": [
+                {
+                  ">": [
+                    {
+                      "var": "net_amount"
+                    },
+                    5000
+                  ]
+                },
+                {
+                  "==": [
+                    {
+                      "var": "category"
+                    },
+                    "equipment"
+                  ]
+                },
+                {
+                  "!=": [
+                    {
+                      "var": "cost_center"
+                    },
+                    "0400"
+                  ]
+                }
+              ]
+            },
+            "consequence": {
+              "require": {
+                "cost_center": "0400"
+              }
+            },
+            "quote": "Alles über fünftausend netto bei Ausrüstung ist Anlagevermögen, also 0400.",
+            "quote_en": "Anything over five thousand net for equipment is a fixed asset, so 0400.",
+            "evidence": [
+              {
+                "event_id": "seed-se-4471-cost-center",
+                "turn_id": "seed-t07",
+                "t_ms": 192000
+              }
+            ]
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000202",
+            "key": "G2",
+            "kind": "condition",
+            "description": "No asset number, no capex booking.",
+            "rule": {
+              "and": [
+                {
+                  "==": [
+                    {
+                      "var": "cost_center"
+                    },
+                    "0400"
+                  ]
+                },
+                {
+                  "!": {
+                    "var": "asset_number"
+                  }
+                }
+              ]
+            },
+            "consequence": {
+              "block": true
+            },
+            "quote": "Ohne Anlagennummer kann ich nicht auf 0400 buchen.",
+            "quote_en": "Without an asset number I can't book to 0400.",
+            "evidence": [
+              {
+                "event_id": "seed-se-4471-asset",
+                "turn_id": "seed-t09",
+                "t_ms": 214000
+              }
+            ]
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000203",
+            "key": "G3",
+            "kind": "stop_and_ask",
+            "description": "Unknown supplier: stop and ask the controller.",
+            "rule": {
+              "==": [
+                {
+                  "var": "supplier_known"
+                },
+                false
+              ]
+            },
+            "consequence": {
+              "action": "ask_controller"
+            },
+            "quote": "Wenn ich den Lieferanten nicht kenne, frage ich erst den Controller.",
+            "quote_en": "If I don't know the supplier, I ask the controller first.",
+            "evidence": [
+              {
+                "event_id": "seed-se-4471-supplier",
+                "turn_id": "seed-t02",
+                "t_ms": 21000
+              }
+            ]
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000204",
+            "key": "G4",
+            "kind": "hold",
+            "description": "Kranbau GmbH double-bills in December: put the invoice on hold.",
+            "rule": {
+              "and": [
+                {
+                  "in": [
+                    {
+                      "var": "supplier"
+                    },
+                    [
+                      "Kranbau GmbH"
+                    ]
+                  ]
+                },
+                {
+                  "==": [
+                    {
+                      "var": "invoice_month"
+                    },
+                    12
+                  ]
+                }
+              ]
+            },
+            "consequence": {
+              "action": "hold"
+            },
+            "quote": "Kranbau rechnet im Dezember gern doppelt ab, deshalb setze ich die auf Halt.",
+            "quote_en": "Kranbau likes to double-bill in December, so I put those on hold.",
+            "evidence": [
+              {
+                "event_id": "seed-se-4480-status",
+                "turn_id": "seed-t12",
+                "t_ms": 318000
+              }
+            ]
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000205",
+            "key": "G5",
+            "kind": "second_approval",
+            "description": "The Czech subsidiary (CZ01) needs a second approval.",
+            "rule": {
+              "and": [
+                {
+                  "in": [
+                    "CZ",
+                    {
+                      "var": "company_code"
+                    }
+                  ]
+                },
+                {
+                  "<": [
+                    {
+                      "var": "approvals_count"
+                    },
+                    2
+                  ]
+                }
+              ]
+            },
+            "consequence": {
+              "action": "second_approval"
+            },
+            "quote": "Bei CZ01 brauchen wir immer zwei Freigaben.",
+            "quote_en": "For CZ01 we always need two approvals.",
+            "evidence": [
+              {
+                "event_id": "seed-se-4492-approver",
+                "turn_id": "seed-t15",
+                "t_ms": 431000
+              }
+            ]
+          }
+        ],
+        "open_items": [],
+        "confirmed_turn_id": "seed-t20"
+      }
+    }
+  ]
+}
